@@ -11,6 +11,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [currentUrl, setCurrentUrl] = useState('');
   const [blockingEnabled, setBlockingEnabled] = useState(true);
+  const [analyzingPolicy, setAnalyzingPolicy] = useState(false);
 
   useEffect(() => {
     loadCurrentSiteData();
@@ -78,10 +79,10 @@ const App: React.FC = () => {
       console.error('Failed to trigger opt-out:', error);
     }
   };
-
   const handleAnalyzePolicy = async () => {
-    if (!siteData) return;
+    if (!siteData || analyzingPolicy) return;
 
+    setAnalyzingPolicy(true);
     try {
       const response = await chrome.runtime.sendMessage({
         action: 'analyzePrivacyPolicy',
@@ -94,6 +95,18 @@ const App: React.FC = () => {
       });
     } catch (error) {
       console.error('Failed to analyze privacy policy:', error);
+      // Show user-friendly error
+      setSiteData({
+        ...siteData,
+        privacyAnalysis: {
+          score: 0,
+          risks: ['Analysis failed due to technical error'],
+          summary: 'Unable to analyze privacy policy at this time. Please try again later.',
+          dataSharing: []
+        }
+      });
+    } finally {
+      setAnalyzingPolicy(false);
     }
   };
 
@@ -148,12 +161,11 @@ const App: React.FC = () => {
                 🔗 Data Flow
               </div>
               <DataFlowVisualization dataFlow={siteData.dataFlow} />
-            </div>
-
-            <ActionButtons 
+            </div>            <ActionButtons 
               onOptOut={handleOptOut}
               onAnalyzePolicy={handleAnalyzePolicy}
               hasPrivacyAnalysis={!!siteData.privacyAnalysis}
+              analyzingPolicy={analyzingPolicy}
             />
           </>
         ) : (

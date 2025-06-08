@@ -4,12 +4,14 @@ interface ActionButtonsProps {
   onOptOut: () => void;
   onAnalyzePolicy: () => void;
   hasPrivacyAnalysis: boolean;
+  analyzingPolicy?: boolean;
 }
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({ 
   onOptOut, 
   onAnalyzePolicy, 
-  hasPrivacyAnalysis 
+  hasPrivacyAnalysis,
+  analyzingPolicy = false
 }) => {
   return (
     <div className="action-buttons">
@@ -20,14 +22,21 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
       >
         🛡️ Quick Opt-out
       </button>
-      
-      {!hasPrivacyAnalysis && (
+        {!hasPrivacyAnalysis && (
         <button 
           className="btn btn-secondary"
           onClick={onAnalyzePolicy}
+          disabled={analyzingPolicy}
           title="Analyze the privacy policy with AI"
         >
-          🤖 Analyze Policy
+          {analyzingPolicy ? (
+            <>
+              <div className="spinner" style={{ width: '12px', height: '12px', marginRight: '6px' }}></div>
+              Analyzing...
+            </>
+          ) : (
+            <>🤖 Analyze Policy</>
+          )}
         </button>
       )}
     </div>

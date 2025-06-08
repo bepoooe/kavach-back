@@ -375,6 +375,26 @@ body {
   background: #e2e8f0;
 }
 
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn:disabled:hover {
+  background: inherit;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn:disabled:hover {
+  background: inherit;
+}
+
 .empty-state {
   text-align: center;
   padding: 24px;

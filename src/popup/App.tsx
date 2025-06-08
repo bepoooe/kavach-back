@@ -1,0 +1,170 @@
+import React, { useState, useEffect } from 'react';
+import { SiteData } from '../utils/types';
+import TrustScore from '../components/TrustScore';
+import TrackerList from '../components/TrackerList';
+import PrivacyAnalysis from '../components/PrivacyAnalysis';
+import DataFlowVisualization from '../components/DataFlowVisualization';
+import ActionButtons from '../components/ActionButtons';
+
+const App: React.FC = () => {
+  const [siteData, setSiteData] = useState<SiteData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [currentUrl, setCurrentUrl] = useState('');
+  const [blockingEnabled, setBlockingEnabled] = useState(true);
+
+  useEffect(() => {
+    loadCurrentSiteData();
+    loadSettings();
+  }, []);
+
+  const loadCurrentSiteData = async () => {
+    try {
+      // Get current tab
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab.url) return;
+
+      setCurrentUrl(tab.url);
+
+      // Get site data from background script
+      const response = await chrome.runtime.sendMessage({
+        action: 'getSiteData',
+        url: tab.url
+      });
+
+      setSiteData(response);
+    } catch (error) {
+      console.error('Failed to load site data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSettings = async () => {
+    try {
+      const result = await chrome.storage.sync.get(['blockingEnabled']);
+      setBlockingEnabled(result.blockingEnabled ?? true);
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
+  };
+
+  const handleToggleBlocking = async (enabled: boolean) => {
+    try {
+      await chrome.runtime.sendMessage({
+        action: 'toggleBlocking',
+        enabled
+      });
+      
+      await chrome.storage.sync.set({ blockingEnabled: enabled });
+      setBlockingEnabled(enabled);
+    } catch (error) {
+      console.error('Failed to toggle blocking:', error);
+    }
+  };
+
+  const handleOptOut = async () => {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab.id) return;
+
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: () => {
+          // Trigger opt-out in content script
+          window.postMessage({ type: 'KAVACH_TRIGGER_OPTOUT' }, '*');
+        }
+      });
+    } catch (error) {
+      console.error('Failed to trigger opt-out:', error);
+    }
+  };
+
+  const handleAnalyzePolicy = async () => {
+    if (!siteData) return;
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'analyzePrivacyPolicy',
+        url: currentUrl
+      });
+
+      setSiteData({
+        ...siteData,
+        privacyAnalysis: response
+      });
+    } catch (error) {
+      console.error('Failed to analyze privacy policy:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="app">
+        <div className="loading">
+          <div className="spinner"></div>
+          Loading site data...
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app">
+      <header className="header">
+        <div className="logo">🛡️</div>
+        <div className="header-text">
+          <h1>Kavach</h1>
+          <p>Privacy Guardian</p>
+        </div>
+      </header>
+
+      <div className="content">
+        {siteData ? (
+          <>
+            <TrustScore 
+              score={siteData.trustScore} 
+              url={currentUrl}
+            />
+            
+            <div className="section">
+              <div className="section-header">
+                <div className="section-title">
+                  🚫 Tracker Blocking
+                </div>
+                <div 
+                  className={`toggle-switch ${blockingEnabled ? 'active' : ''}`}
+                  onClick={() => handleToggleBlocking(!blockingEnabled)}
+                />
+              </div>
+              <TrackerList trackers={siteData.trackers} />
+            </div>
+
+            {siteData.privacyAnalysis && (
+              <PrivacyAnalysis analysis={siteData.privacyAnalysis} />
+            )}
+
+            <div className="section">
+              <div className="section-title">
+                🔗 Data Flow
+              </div>
+              <DataFlowVisualization dataFlow={siteData.dataFlow} />
+            </div>
+
+            <ActionButtons 
+              onOptOut={handleOptOut}
+              onAnalyzePolicy={handleAnalyzePolicy}
+              hasPrivacyAnalysis={!!siteData.privacyAnalysis}
+            />
+          </>
+        ) : (
+          <div className="empty-state">
+            <p>No tracking data available for this site yet.</p>
+            <p>Navigate to a website to see privacy insights.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default App;

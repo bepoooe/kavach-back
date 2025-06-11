@@ -6,46 +6,180 @@ interface PrivacyAnalysisProps {
 }
 
 const PrivacyAnalysis: React.FC<PrivacyAnalysisProps> = ({ analysis }) => {
+  const getScoreColor = (score: number) => {
+    if (score >= 70) return '#10b981';
+    if (score >= 40) return '#f59e0b';
+    return '#ef4444';
+  };
+
+  const getScoreLabel = (score: number) => {
+    if (score >= 80) return 'Excellent';
+    if (score >= 70) return 'Good';
+    if (score >= 50) return 'Fair';
+    if (score >= 30) return 'Poor';
+    return 'Critical';
+  };
+
   return (
     <div className="section">
       <div className="section-title">
-        📋 Privacy Policy Analysis
+        📋 AI Privacy Policy Analysis
       </div>
       
-      <div className="privacy-summary">
-        {analysis.summary}
+      {/* Privacy Score Bar */}
+      <div style={{ 
+        background: 'linear-gradient(135deg, #f8fafc, #e2e8f0)', 
+        padding: '20px', 
+        borderRadius: '16px', 
+        marginBottom: '20px',
+        border: '2px solid #e2e8f0'
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '12px' 
+        }}>
+          <span style={{ fontSize: '14px', fontWeight: '600', color: '#64748b' }}>
+            Privacy Score
+          </span>
+          <span style={{ 
+            fontSize: '24px', 
+            fontWeight: '800', 
+            color: getScoreColor(analysis.score) 
+          }}>
+            {analysis.score}/100
+          </span>
+        </div>
+        <div style={{ 
+          width: '100%', 
+          height: '12px', 
+          background: '#e2e8f0', 
+          borderRadius: '6px', 
+          overflow: 'hidden',
+          position: 'relative'
+        }}>
+          <div style={{ 
+            width: `${analysis.score}%`, 
+            height: '100%', 
+            background: `linear-gradient(90deg, ${getScoreColor(analysis.score)}, ${getScoreColor(analysis.score)}dd)`,
+            borderRadius: '6px',
+            transition: 'width 1s ease-out',
+            position: 'relative'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+              animation: 'scoreShimmer 2s ease-in-out infinite'
+            }} />
+          </div>
+        </div>
+        <div style={{ 
+          textAlign: 'center', 
+          marginTop: '8px', 
+          fontSize: '12px', 
+          fontWeight: '600',
+          color: getScoreColor(analysis.score),
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px'
+        }}>
+          {getScoreLabel(analysis.score)} Privacy Protection
+        </div>
+      </div>
+      
+      <div className="privacy-summary" style={{ 
+        fontSize: '14px', 
+        lineHeight: '1.6',
+        background: 'linear-gradient(135deg, #f0f9ff, #e0f2fe)',
+        padding: '16px',
+        borderRadius: '12px',
+        border: '1px solid #bae6fd',
+        marginBottom: '20px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+          <span style={{ fontSize: '20px', flexShrink: 0 }}>🤖</span>
+          <div>
+            <strong style={{ color: '#0369a1', marginBottom: '8px', display: 'block' }}>
+              AI Analysis Summary
+            </strong>
+            {analysis.summary}
+          </div>
+        </div>
       </div>
 
       {analysis.risks.length > 0 && (
-        <div className="privacy-risks">
-          <strong style={{ fontSize: '13px', marginBottom: '8px', display: 'block' }}>
-            ⚠️ Potential Risks:
+        <div className="privacy-risks" style={{ marginBottom: '20px' }}>
+          <strong style={{ 
+            fontSize: '16px', 
+            marginBottom: '16px', 
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            color: '#dc2626'
+          }}>
+            ⚠️ Privacy Risks Detected
           </strong>
-          {analysis.risks.map((risk, index) => (
-            <div key={index} className="risk-item">
-              <span>•</span>
-              <span>{risk}</span>
-            </div>
-          ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {analysis.risks.map((risk, index) => (
+              <div key={index} className="risk-item" style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px',
+                padding: '12px 16px',
+                background: 'linear-gradient(135deg, #fef2f2, #fee2e2)',
+                borderRadius: '12px',
+                border: '1px solid #fecaca',
+                fontSize: '13px',
+                lineHeight: '1.4'
+              }}>
+                <span style={{ 
+                  color: '#dc2626', 
+                  fontSize: '16px', 
+                  flexShrink: 0,
+                  marginTop: '2px'
+                }}>•</span>
+                <span style={{ color: '#7f1d1d', fontWeight: '500' }}>{risk}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {analysis.dataSharing.length > 0 && (
-        <div style={{ marginTop: '12px' }}>
-          <strong style={{ fontSize: '13px', marginBottom: '8px', display: 'block' }}>
-            🔗 Data Shared With:
+        <div>
+          <strong style={{ 
+            fontSize: '16px', 
+            marginBottom: '16px', 
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            color: '#7c2d12'
+          }}>
+            🔗 Data Sharing Partners
           </strong>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
+            gap: '8px' 
+          }}>
             {analysis.dataSharing.map((company, index) => (
               <span 
                 key={index}
                 style={{
-                  padding: '4px 8px',
-                  background: '#fef2f2',
+                  padding: '10px 16px',
+                  background: 'linear-gradient(135deg, #fef2f2, #fee2e2)',
                   color: '#dc2626',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  fontWeight: '500'
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  textAlign: 'center',
+                  border: '2px solid #fecaca',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.3px'
                 }}
               >
                 {company}

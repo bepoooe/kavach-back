@@ -5,7 +5,7 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Titillium Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: #f8fafc;
   color: #1e293b;
   margin: 0;
@@ -75,16 +75,20 @@ body {
 }
 
 .header-text h1 {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   margin-bottom: 2px;
   text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  letter-spacing: 0.5px;
+  font-family: 'Titillium Web', sans-serif;
 }
 
 .header-text p {
   font-size: 12px;
   opacity: 0.95;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  font-family: 'Titillium Web', sans-serif;
 }
 
 .content {
@@ -166,11 +170,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
-  font-weight: 800;
+  font-size: 30px;
+  font-weight: 900;
   color: white;
   position: relative;
   box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  font-family: 'Titillium Web', sans-serif;
 }
 
 .score-circle::before {
@@ -196,22 +201,25 @@ body {
 }
 
 .score-label {
-  font-size: 14px;
-  color: #475569;
+  font-size: 15px;
+  color: #1e293b;
   margin-bottom: 4px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-family: 'Titillium Web', sans-serif;
 }
 
 .site-url {
-  font-size: 12px;
+  font-size: 13px;
   color: #64748b;
-  font-weight: 500;
+  font-weight: 600;
   background: rgba(100, 116, 139, 0.1);
-  padding: 3px 8px;
+  padding: 3px 10px;
   border-radius: 8px;
   display: inline-block;
   margin-top: 3px;
+  font-family: 'Titillium Web', sans-serif;
 }
 
 .section {
@@ -252,14 +260,16 @@ body {
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   display: flex;
   align-items: center;
   gap: 8px;
   color: #1e293b;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
   position: relative;
+  font-family: 'Titillium Web', sans-serif;
+  text-transform: uppercase;
 }
 
 .section-title::before {
@@ -607,11 +617,12 @@ body {
   padding: 2px 4px !important;
   border-radius: 4px !important;
   display: inline-block !important;
+  font-family: 'Titillium Web', sans-serif !important;
 }
 
 .node-domain {
   font-size: 13px !important;
-  font-weight: 800 !important;
+  font-weight: 700 !important;
   word-break: break-word !important;
   line-height: 1.4 !important;
   color: white !important;
@@ -623,6 +634,7 @@ body {
   background: rgba(0, 0, 0, 0.2) !important;
   padding: 3px 6px !important;
   border-radius: 4px !important;
+  font-family: 'Titillium Web', sans-serif !important;
 }
 
 .flow-arrow {
@@ -788,9 +800,11 @@ body {
 .warning-text {
   font-size: 14px;
   color: #991b1b;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.5;
   flex: 1;
+  font-family: 'Titillium Web', sans-serif;
+  letter-spacing: 0.2px;
 }
 
 .action-buttons {
@@ -815,18 +829,19 @@ body {
   padding: 12px 16px;
   border: none;
   border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  text-transform: none;
-  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: 'Titillium Web', sans-serif;
 }
 
 .btn::before {

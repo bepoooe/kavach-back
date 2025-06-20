@@ -153,10 +153,9 @@ const App: React.FC = () => {
               url={currentUrl}
             />
             
-            <div className="section">
-              <div className="section-header">
+            <div className="section">              <div className="section-header">
                 <div className="section-title">
-                  🚫 Tracker Blocking
+                  Tracker Blocking
                 </div>
                 <div 
                   className={`toggle-switch ${blockingEnabled ? 'active' : ''}`}
@@ -168,14 +167,12 @@ const App: React.FC = () => {
 
             {siteData.privacyAnalysis && (
               <PrivacyAnalysis analysis={siteData.privacyAnalysis} />
-            )}
-
-            <div className="section">
+            )}            <div className="section">
               <div className="section-title">
-                🔗 Data Flow
+                Data Flow
               </div>
               <DataFlowVisualization dataFlow={siteData.dataFlow} />
-            </div>            <ActionButtons 
+            </div><ActionButtons 
               onOptOut={handleOptOut}
               onAnalyzePolicy={handleAnalyzePolicy}
               hasPrivacyAnalysis={!!siteData.privacyAnalysis}

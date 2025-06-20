@@ -14,8 +14,8 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   analyzingPolicy = false
 }) => {
   return (
-    <div className="action-buttons">
-      <button 
+    <div className="action-buttons">      
+    <button 
         className="btn btn-primary"
         onClick={onOptOut}
         title="Exercise your GDPR/CCPA rights and opt-out of tracking"
@@ -26,7 +26,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           gap: '8px'
         }}
       >
-        <span style={{ fontSize: '16px' }}>🛡️</span>
         <span>Quick Opt-out</span>
       </button>
       
@@ -54,33 +53,29 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
                 animation: 'spin 1s linear infinite'
               }}></div>
               <span>Analyzing...</span>
-            </>
-          ) : (
+            </>          ) : (
             <>
-              <span style={{ fontSize: '16px' }}>🤖</span>
               <span>Analyze Policy</span>
             </>
           )}
         </button>
       )}
       
-      {hasPrivacyAnalysis && (
-        <div style={{
+      {hasPrivacyAnalysis && (        <div style={{
           flex: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: '8px',
           padding: '16px 24px',
-          background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)',
+          background: 'linear-gradient(135deg, #DFFF19, #007E36)',
           borderRadius: '16px',
-          border: '2px solid #86efac',
-          color: '#166534',
+          border: '2px solid #007E36',
+          color: '#003d1b',
           fontWeight: '700',
           textTransform: 'uppercase',
           letterSpacing: '0.5px'
         }}>
-          <span style={{ fontSize: '16px' }}>✅</span>
           <span>Analysis Complete</span>
         </div>
       )}

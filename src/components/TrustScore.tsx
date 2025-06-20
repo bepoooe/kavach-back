@@ -11,17 +11,10 @@ const TrustScore: React.FC<TrustScoreProps> = ({ score, url }) => {
     if (score >= 50) return 'score-medium';
     return 'score-low';
   };
-
   const getScoreLabel = (score: number) => {
     if (score >= 80) return 'Excellent Privacy';
     if (score >= 50) return 'Fair Privacy';
     return 'Poor Privacy';
-  };
-
-  const getScoreEmoji = (score: number) => {
-    if (score >= 80) return '🛡️';
-    if (score >= 50) return '⚠️';
-    return '🚨';
   };
 
   const getDomain = (url: string) => {
@@ -31,13 +24,9 @@ const TrustScore: React.FC<TrustScoreProps> = ({ score, url }) => {
       return url;
     }
   };
-  return (
-    <div className="trust-score">
+  return (    <div className="trust-score">
       <div className={`score-circle ${getScoreClass(score)}`}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '4px' }}>
-            {getScoreEmoji(score)}
-          </div>
           <div style={{ fontSize: '36px', fontWeight: '800' }}>
             {score}
           </div>
@@ -49,7 +38,7 @@ const TrustScore: React.FC<TrustScoreProps> = ({ score, url }) => {
       </div>
       
       <div className="site-url">
-        🌐 {getDomain(url)}
+        {getDomain(url)}
       </div>
 
       {/* Privacy metrics */}

@@ -99,9 +99,7 @@ const PrivacyAnalysis: React.FC<PrivacyAnalysisProps> = ({ analysis }) => {
         borderRadius: '12px',
         border: '1px solid #bae6fd',
         marginBottom: '20px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-          <span style={{ fontSize: '20px', flexShrink: 0 }}>🤖</span>
+      }}>        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
           <div>
             <strong style={{ color: '#0369a1', marginBottom: '8px', display: 'block' }}>
               AI Analysis Summary
@@ -112,8 +110,7 @@ const PrivacyAnalysis: React.FC<PrivacyAnalysisProps> = ({ analysis }) => {
       </div>
 
       {analysis.risks.length > 0 && (
-        <div className="privacy-risks" style={{ marginBottom: '20px' }}>
-          <strong style={{ 
+        <div className="privacy-risks" style={{ marginBottom: '20px' }}>          <strong style={{ 
             fontSize: '16px', 
             marginBottom: '16px', 
             display: 'flex',
@@ -121,7 +118,7 @@ const PrivacyAnalysis: React.FC<PrivacyAnalysisProps> = ({ analysis }) => {
             gap: '8px',
             color: '#dc2626'
           }}>
-            ⚠️ Privacy Risks Detected
+            Privacy Risks Detected
           </strong>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {analysis.risks.map((risk, index) => (

@@ -5,11 +5,9 @@ interface TrackerListProps {
   trackers: TrackerData[];
 }
 
-const TrackerList: React.FC<TrackerListProps> = ({ trackers }) => {
-  if (trackers.length === 0) {
+const TrackerList: React.FC<TrackerListProps> = ({ trackers }) => {  if (trackers.length === 0) {
     return (
       <div className="empty-state" style={{ textAlign: 'center', padding: '32px' }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.5 }}>🎯</div>
         <p style={{ fontSize: '16px', fontWeight: '600', color: '#64748b' }}>No trackers detected</p>
         <p style={{ fontSize: '14px', color: '#94a3b8', marginTop: '8px' }}>This page appears to be clean!</p>
       </div>
@@ -19,13 +17,12 @@ const TrackerList: React.FC<TrackerListProps> = ({ trackers }) => {
   const getCategoryClass = (category: string) => {
     return `category-${category}`;
   };
-
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'advertising': return '📢';
-      case 'analytics': return '📊';
-      case 'social': return '👥';
-      default: return '❓';
+      case 'advertising': return 'ADS';
+      case 'analytics': return 'DATA';
+      case 'social': return 'SOCIAL';
+      default: return 'OTHER';
     }
   };
 
@@ -76,10 +73,16 @@ const TrackerList: React.FC<TrackerListProps> = ({ trackers }) => {
 
       <div className="tracker-list">
         {trackers.map((tracker, index) => (
-          <div key={index} className="tracker-item">
-            <div className="tracker-info">
+          <div key={index} className="tracker-item">            <div className="tracker-info">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '18px' }}>
+                <span style={{ 
+                  fontSize: '10px', 
+                  fontWeight: '700',
+                  background: '#007E36',
+                  color: 'white',
+                  padding: '2px 6px',
+                  borderRadius: '4px'
+                }}>
                   {getCategoryIcon(tracker.category)}
                 </span>
                 <span className={`tracker-category ${getCategoryClass(tracker.category)}`}>
@@ -98,22 +101,20 @@ const TrackerList: React.FC<TrackerListProps> = ({ trackers }) => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span className="tracker-count">
                 {tracker.count} req{tracker.count !== 1 ? 's' : ''}
-              </span>
-              {tracker.blocked ? (
+              </span>              {tracker.blocked ? (
                 <div style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '4px',
-                  background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)',
+                  background: 'linear-gradient(135deg, #DFFF19, #007E36)',
                   padding: '4px 8px',
                   borderRadius: '8px',
-                  border: '1px solid #86efac'
+                  border: '1px solid #007E36'
                 }}>
-                  <span style={{ fontSize: '14px' }}>🛡️</span>
                   <span style={{ 
                     fontSize: '11px', 
                     fontWeight: '700', 
-                    color: '#166534',
+                    color: '#003d1b',
                     textTransform: 'uppercase'
                   }}>
                     Blocked
@@ -129,7 +130,6 @@ const TrackerList: React.FC<TrackerListProps> = ({ trackers }) => {
                   borderRadius: '8px',
                   border: '1px solid #fecaca'
                 }}>
-                  <span style={{ fontSize: '14px' }}>⚠️</span>
                   <span style={{ 
                     fontSize: '11px', 
                     fontWeight: '700', 

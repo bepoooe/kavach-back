@@ -109,11 +109,13 @@ const App: React.FC = () => {
       setAnalyzingPolicy(false);
     }
   };
-
   if (loading) {
     return (
       <div className="app">
         <div className="loading">
+          <div className="loading-logo">
+            <img src="logo.png" alt="Kavach Logo" className="logo-image" />
+          </div>
           <div className="spinner"></div>
           Loading site data...
         </div>
@@ -122,9 +124,10 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="app">
-      <header className="header">
-        <div className="logo">🛡️</div>
+    <div className="app">      <header className="header">
+        <div className="logo">
+          <img src="logo.png" alt="Kavach Logo" className="logo-image" />
+        </div>
         <div className="header-text">
           <h1>Kavach</h1>
           <p>Privacy Guardian</p>
@@ -168,8 +171,10 @@ const App: React.FC = () => {
               analyzingPolicy={analyzingPolicy}
             />
           </>
-        ) : (
-          <div className="empty-state">
+        ) : (          <div className="empty-state">
+            <div className="empty-state-logo">
+              <img src="logo.png" alt="Kavach Logo" className="logo-image" />
+            </div>
             <p>No tracking data available for this site yet.</p>
             <p>Navigate to a website to see privacy insights.</p>
           </div>

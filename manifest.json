@@ -1,8 +1,13 @@
 {
-  "manifest_version": 3,
-  "name": "Kavach - Privacy Guardian",
+  "manifest_version": 3,  "name": "Kavach - Privacy Guardian",
   "version": "1.0.0",
   "description": "Advanced privacy protection with real-time tracker blocking, AI-powered privacy policy analysis, and data flow visualization",
+  "icons": {
+    "16": "logo.png",
+    "32": "logo.png",
+    "48": "logo.png",
+    "128": "logo.png"
+  },
   "permissions": [
     "activeTab",
     "tabs",
@@ -24,10 +29,15 @@
       "js": ["content.js"],
       "run_at": "document_start"
     }
-  ],
-  "action": {
+  ],  "action": {
     "default_popup": "popup.html",
-    "default_title": "Kavach Privacy Guardian"
+    "default_title": "Kavach Privacy Guardian",
+    "default_icon": {
+      "16": "logo.png",
+      "32": "logo.png",
+      "48": "logo.png",
+      "128": "logo.png"
+    }
   },
   "web_accessible_resources": [
     {

@@ -455,7 +455,7 @@ body {
 .data-flow {
   background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
   border-radius: 12px;
-  padding: 20px 16px 16px;
+  padding: 22px 16px 16px;
   position: relative;
   color: white;
   min-height: 140px;
@@ -463,8 +463,9 @@ body {
   width: 100%;
   box-sizing: border-box;
   overflow: visible;
-  margin-bottom: 8px;
-  margin-top: 16px;
+  margin-bottom: 16px;
+  margin-top: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
 .data-flow::before {
@@ -556,10 +557,10 @@ body {
 }
 
 .flow-node.source { 
-  border-color: #007E36; 
-  background: linear-gradient(135deg, #ffffff 0%, #f0fff4 100%);
-  box-shadow: 0 8px 24px rgba(0, 126, 54, 0.2);
-  color: #003d1b !important;
+  border-color: #DFFF19; 
+  background: linear-gradient(135deg, #007E36 0%, #005a26 100%) !important;
+  box-shadow: 0 8px 24px rgba(0, 126, 54, 0.4);
+  color: white !important;
 }
 
 .flow-node.source::after {
@@ -575,10 +576,10 @@ body {
 }
 
 .flow-node.tracker { 
-  border-color: #ef4444; 
-  background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
-  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2);
-  color: #7f1d1d !important;
+  border-color: #ffcaca; 
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+  color: white !important;
 }
 
 .flow-node.tracker::after {
@@ -594,26 +595,34 @@ body {
 }
 
 .node-label {
-  font-size: 10px !important;
+  font-size: 11px !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
-  opacity: 0.9 !important;
-  margin-bottom: 4px !important;
+  opacity: 1 !important;
+  margin-bottom: 6px !important;
   letter-spacing: 0.5px !important;
-  color: #475569 !important;
+  color: #1e293b !important;
   line-height: 1.2 !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  padding: 2px 4px !important;
+  border-radius: 4px !important;
+  display: inline-block !important;
 }
 
 .node-domain {
-  font-size: 12px !important;
-  font-weight: 700 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
   word-break: break-word !important;
-  line-height: 1.3 !important;
-  color: inherit !important;
+  line-height: 1.4 !important;
+  color: white !important;
   max-width: 100% !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   hyphens: auto !important;
+  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.5) !important;
+  background: rgba(0, 0, 0, 0.2) !important;
+  padding: 3px 6px !important;
+  border-radius: 4px !important;
 }
 
 .flow-arrow {

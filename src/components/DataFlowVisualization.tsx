@@ -65,16 +65,17 @@ const DataFlowVisualization: React.FC<DataFlowVisualizationProps> = ({ dataFlow 
                   <div className="node-domain">{formatDomain(node.domain)}</div>
                 </div>
               ))}{remainingCount > 0 && (                <div style={{
-                  fontSize: '11px',
-                  color: '#94a3b8',
+                  fontSize: '12px',
+                  color: 'white',
                   textAlign: 'center',
                   fontStyle: 'italic',
-                  marginTop: '8px',
-                  padding: '6px 10px',
-                  background: 'rgba(148, 163, 184, 0.2)',
+                  marginTop: '12px',
+                  padding: '8px 12px',
+                  background: 'rgba(255, 255, 255, 0.15)',
                   borderRadius: '10px',
-                  border: '1px solid rgba(148, 163, 184, 0.3)',
-                  fontWeight: '600'
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  fontWeight: '700',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
                 }}>
                   +{remainingCount} more tracker{remainingCount > 1 ? 's' : ''}
                 </div>

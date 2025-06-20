@@ -168,7 +168,7 @@ const App: React.FC = () => {
             {siteData.privacyAnalysis && (
               <PrivacyAnalysis analysis={siteData.privacyAnalysis} />
             )}            <div className="section">
-              <div className="section-title">
+              <div className="section-title" style={{ marginBottom: '20px' }}>
                 Data Flow
               </div>
               <DataFlowVisualization dataFlow={siteData.dataFlow} />

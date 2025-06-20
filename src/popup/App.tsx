@@ -10,8 +10,8 @@ const App: React.FC = () => {
   const [siteData, setSiteData] = useState<SiteData | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentUrl, setCurrentUrl] = useState('');
-  const [blockingEnabled, setBlockingEnabled] = useState(true);
-  const [analyzingPolicy, setAnalyzingPolicy] = useState(false);
+  const [blockingEnabled, setBlockingEnabled] = useState(true);  const [analyzingPolicy, setAnalyzingPolicy] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   useEffect(() => {
     loadCurrentSiteData();
@@ -78,8 +78,7 @@ const App: React.FC = () => {
     } catch (error) {
       console.error('Failed to trigger opt-out:', error);
     }
-  };
-  const handleAnalyzePolicy = async () => {
+  };  const handleAnalyzePolicy = async () => {
     if (!siteData || analyzingPolicy) return;
 
     setAnalyzingPolicy(true);
@@ -107,6 +106,18 @@ const App: React.FC = () => {
       });
     } finally {
       setAnalyzingPolicy(false);
+    }
+  };
+
+  const handleDebugInfo = async () => {
+    try {
+      const response = await chrome.runtime.sendMessage({
+        action: 'debugInfo'
+      });
+      setDebugInfo(response);
+      console.log('🐛 Debug Info:', response);
+    } catch (error) {
+      console.error('Failed to get debug info:', error);
     }
   };
   if (loading) {
@@ -170,6 +181,25 @@ const App: React.FC = () => {
               hasPrivacyAnalysis={!!siteData.privacyAnalysis}
               analyzingPolicy={analyzingPolicy}
             />
+
+            {/* Debug Section */}
+            <div className="debug-section">
+              <button onClick={handleDebugInfo} className="debug-button">
+                🐛 Debug Info
+              </button>
+              {debugInfo && (
+                <div className="debug-info">
+                  <p><strong>Tracked Domains:</strong> {debugInfo.totalSites}</p>
+                  <p><strong>Current Domain:</strong> {new URL(currentUrl).hostname}</p>
+                  {debugInfo.siteDataSnapshot.length > 0 && (
+                    <details>
+                      <summary>Site Data</summary>
+                      <pre>{JSON.stringify(debugInfo.siteDataSnapshot, null, 2)}</pre>
+                    </details>
+                  )}
+                </div>
+              )}
+            </div>
           </>
         ) : (          <div className="empty-state">
             <div className="empty-state-logo">

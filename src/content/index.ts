@@ -1,10 +1,11 @@
 // Content script for detecting privacy policies and injecting tracking detection
 class ContentScript {
   private privacyPolicyUrls: string[] = [];
-
   constructor() {
+    console.log('🔍 Kavach Content Script starting on:', window.location.href);
     this.detectPrivacyPolicies();
     this.injectTrackingDetector();
+    console.log('✅ Kavach Content Script initialized');
   }
   private detectPrivacyPolicies() {
     // Look for privacy policy links with better detection

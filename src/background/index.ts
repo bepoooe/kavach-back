@@ -5,22 +5,27 @@ class BackgroundService {
   private siteData = new Map<string, SiteData>();
   private blockedRequests = new Map<string, number>();
   private privacyPolicyUrls = new Map<string, string[]>();
-
   constructor() {
+    console.log('🚀 Kavach Background Service starting...');
     this.setupRequestBlocking();
     this.setupTabListeners();
     this.setupMessageListeners();
-  }
-  private setupRequestBlocking() {
+    console.log('✅ Kavach Background Service initialized');
+  }private setupRequestBlocking() {
+    console.log('🛡️ Kavach: Setting up request blocking...');
+    
     // Monitor web requests to track third-party requests
     chrome.webRequest.onBeforeRequest.addListener(
       (details) => {
+        console.log('🌐 Request detected:', details.url, 'Type:', details.type, 'Initiator:', details.initiator);
+        
         if (details.type === 'main_frame') return {};
         
         const url = new URL(details.url);
         const initiatorUrl = details.initiator ? new URL(details.initiator) : null;
         
         if (initiatorUrl && url.hostname !== initiatorUrl.hostname) {
+          console.log('🚨 Third-party request:', url.hostname, 'from', initiatorUrl.hostname);
           this.trackThirdPartyRequest(initiatorUrl.hostname, url.hostname, details.type);
         }
         
@@ -30,34 +35,63 @@ class BackgroundService {
       ['requestBody']
     );
   }
-
   private setupTabListeners() {
+    console.log('👂 Setting up tab listeners...');
+    
     chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       if (changeInfo.status === 'complete' && tab.url) {
+        console.log('📄 Tab completed loading:', tab.url);
         this.initializeSiteData(tab.url);
       }
     });
-  }
 
-  private trackThirdPartyRequest(sourceDomain: string, trackerDomain: string, requestType: string) {
-    const siteData = this.siteData.get(sourceDomain);
-    if (!siteData) return;
+    // Also listen for tab activation to ensure we have data for active tabs
+    chrome.tabs.onActivated.addListener(async (activeInfo) => {
+      try {
+        const tab = await chrome.tabs.get(activeInfo.tabId);
+        if (tab.url) {
+          console.log('🔄 Tab activated:', tab.url);
+          this.initializeSiteData(tab.url);
+        }
+      } catch (error) {
+        console.log('❌ Error getting active tab:', error);
+      }
+    });
+  }private trackThirdPartyRequest(sourceDomain: string, trackerDomain: string, requestType: string) {
+    console.log('📊 Tracking third-party request:', { sourceDomain, trackerDomain, requestType });
+    
+    let siteData = this.siteData.get(sourceDomain);
+    if (!siteData) {
+      console.log('❌ No site data found for:', sourceDomain, '- Creating new site data');
+      // Initialize site data for this domain
+      this.initializeSiteDataForDomain(sourceDomain);
+      siteData = this.siteData.get(sourceDomain);
+      if (!siteData) {
+        console.log('❌ Failed to create site data for:', sourceDomain);
+        return;
+      }
+    }
 
     const existingTracker = siteData.trackers.find(t => t.domain === trackerDomain);
     if (existingTracker) {
       existingTracker.count++;
+      console.log('📈 Updated tracker count:', trackerDomain, existingTracker.count);
     } else {
       const trackerInfo = commonTrackers[trackerDomain as keyof typeof commonTrackers];
-      siteData.trackers.push({
+      const newTracker = {
         domain: trackerDomain,
         count: 1,
         category: trackerInfo?.category || 'unknown',
         blocked: this.isTrackerBlocked(trackerDomain)
-      });
+      };
+      siteData.trackers.push(newTracker);
+      console.log('🆕 New tracker detected:', newTracker);
     }
 
     // Recalculate trust score
+    const oldScore = siteData.trustScore;
     siteData.trustScore = TrustScoreCalculator.calculateScore(siteData.trackers);
+    console.log('🎯 Trust score updated:', oldScore, '→', siteData.trustScore);
     
     // Update data flow visualization
     this.updateDataFlow(siteData, sourceDomain, trackerDomain);
@@ -100,12 +134,12 @@ class BackgroundService {
         dataType: 'user_data'
       });
     }
-  }
-
-  private initializeSiteData(url: string) {
+  }  private initializeSiteData(url: string) {
     const domain = new URL(url).hostname;
+    console.log('🏠 Initializing site data for:', domain);
+    
     if (!this.siteData.has(domain)) {
-      this.siteData.set(domain, {
+      const newSiteData = {
         url,
         trustScore: 100,
         trackers: [],
@@ -113,13 +147,44 @@ class BackgroundService {
           nodes: [],
           edges: []
         }
-      });
+      };
+      this.siteData.set(domain, newSiteData);
+      console.log('✅ Site data initialized:', newSiteData);
+    } else {
+      console.log('♻️ Site data already exists for:', domain);
     }
   }
 
-  async getSiteData(url: string): Promise<SiteData | null> {
+  private initializeSiteDataForDomain(domain: string) {
+    console.log('🏠 Initializing site data for domain:', domain);
+    
+    if (!this.siteData.has(domain)) {
+      const newSiteData = {
+        url: `https://${domain}`, // Construct basic URL from domain
+        trustScore: 100,
+        trackers: [],
+        dataFlow: {
+          nodes: [],
+          edges: []
+        }
+      };
+      this.siteData.set(domain, newSiteData);
+      console.log('✅ Site data initialized for domain:', newSiteData);
+    } else {
+      console.log('♻️ Site data already exists for domain:', domain);
+    }
+  }  async getSiteData(url: string): Promise<SiteData | null> {
     const domain = new URL(url).hostname;
-    return this.siteData.get(domain) || null;
+    
+    // Ensure site data exists for this domain
+    if (!this.siteData.has(domain)) {
+      console.log('🔄 Site data not found, initializing for:', domain);
+      this.initializeSiteData(url);
+    }
+    
+    const siteData = this.siteData.get(domain) || null;
+    console.log('📊 Getting site data for:', domain, 'Found:', !!siteData, 'Trackers:', siteData?.trackers?.length || 0);
+    return siteData;
   }
   async toggleTrackerBlocking(enabled: boolean) {
     // Toggle declarative net request rules
@@ -135,9 +200,10 @@ class BackgroundService {
       });
     }
   }
-
   private setupMessageListeners() {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      console.log('📨 Message received:', request.action, request);
+      
       switch (request.action) {
         case 'getSiteData':
           this.getSiteData(request.url).then(sendResponse);
@@ -156,6 +222,21 @@ class BackgroundService {
         case 'privacyPoliciesFound':
           this.storePrivacyPolicyUrls(request.currentUrl, request.urls);
           sendResponse({ success: true });
+          return true;
+
+        case 'debugInfo':
+          // Return debug information
+          const debugInfo = {
+            trackedDomains: Array.from(this.siteData.keys()),
+            totalSites: this.siteData.size,
+            siteDataSnapshot: Array.from(this.siteData.entries()).map(([domain, data]) => ({
+              domain,
+              trackerCount: data.trackers.length,
+              trustScore: data.trustScore
+            }))
+          };
+          console.log('🐛 Debug info requested:', debugInfo);
+          sendResponse(debugInfo);
           return true;
       }
     });

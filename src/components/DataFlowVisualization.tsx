@@ -42,27 +42,12 @@ const DataFlowVisualization: React.FC<DataFlowVisualizationProps> = ({ dataFlow 
               <div className="node-domain">{formatDomain(sourceNode.domain)}</div>
             </div>
           </div>
-        )}
-
-        {/* Arrow Connector */}
+        )}        {/* Arrow Connector */}
         {dataFlow.edges.length > 0 && sourceNode && displayedTrackers.length > 0 && (
           <div className="flow-section arrow-section">
             <div className="flow-arrow">
               <div className="arrow-line"></div>
               <div className="arrow-head">▶</div>
-            </div>
-            <div style={{ 
-              position: 'absolute', 
-              top: '-12px', 
-              left: '50%', 
-              transform: 'translateX(-50%)',
-              fontSize: '10px',
-              color: '#94a3b8',
-              fontWeight: '600',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}>
-              Data Flow
             </div>
           </div>
         )}
@@ -76,9 +61,19 @@ const DataFlowVisualization: React.FC<DataFlowVisualizationProps> = ({ dataFlow 
                   <div className="node-label">🎯 Tracker {index + 1}</div>
                   <div className="node-domain">{formatDomain(node.domain)}</div>
                 </div>
-              ))}
-              {remainingCount > 0 && (
-                <div className="remaining-count">
+              ))}              {remainingCount > 0 && (
+                <div style={{
+                  fontSize: '11px',
+                  color: '#94a3b8',
+                  textAlign: 'center',
+                  fontStyle: 'italic',
+                  marginTop: '8px',
+                  padding: '6px 10px',
+                  background: 'rgba(148, 163, 184, 0.2)',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(148, 163, 184, 0.3)',
+                  fontWeight: '600'
+                }}>
                   <span style={{ fontSize: '16px', marginRight: '8px' }}>📊</span>
                   +{remainingCount} more tracker{remainingCount > 1 ? 's' : ''}
                 </div>

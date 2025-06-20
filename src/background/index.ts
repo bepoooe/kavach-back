@@ -307,21 +307,34 @@ class BackgroundService {
         dataSharing: []
       };
     }
-  }
+  }  private async fetchPrivacyPolicyText(policyUrl: string): Promise<string> {
+    try {
+      const response = await fetch(policyUrl);
+      const html = await response.text();
 
-  private async fetchPrivacyPolicyText(policyUrl: string): Promise<string> {
-    const response = await fetch(policyUrl);
-    const html = await response.text();
-    
-    // Extract text content from HTML (simple approach)
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    
-    // Remove script and style elements
-    const scripts = doc.querySelectorAll('script, style');
-    scripts.forEach(el => el.remove());
-    
-    return doc.body.textContent || doc.body.innerText || '';
+      // Remove script and style tags
+      let cleanHtml = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+      cleanHtml = cleanHtml.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+
+      // Remove all HTML tags and decode entities
+      let textContent = cleanHtml.replace(/<[^>]*>/g, ' ');
+
+      // Decode common HTML entities
+      textContent = textContent.replace(/&nbsp;/g, ' ')
+                              .replace(/&amp;/g, '&')
+                              .replace(/&lt;/g, '<')
+                              .replace(/&gt;/g, '>')
+                              .replace(/&quot;/g, '"')
+                              .replace(/&#39;/g, "'");
+
+      // Clean up whitespace
+      textContent = textContent.replace(/\s+/g, ' ').trim();
+
+      return textContent;
+    } catch (error) {
+      console.error('Failed to fetch privacy policy:', policyUrl, error);
+      throw new Error(`Failed to fetch privacy policy: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
   private async performPrivacyAnalysis(policyText: string, domain: string): Promise<any> {
     // Mock AI-powered analysis (in real implementation, this would call an AI service)

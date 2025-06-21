@@ -109,6 +109,45 @@ const PrivacyAnalysis: React.FC<PrivacyAnalysisProps> = ({ analysis }) => {
         </div>
       </div>
 
+      {/* Industry Type & Analysis Depth */}
+      {(analysis.industryType || analysis.analysisDepth) && (
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          marginBottom: '16px',
+          flexWrap: 'wrap'
+        }}>
+          {analysis.industryType && (
+            <span style={{
+              padding: '4px 8px',
+              fontSize: '11px',
+              fontWeight: '600',
+              backgroundColor: '#dbeafe',
+              color: '#1e40af',
+              borderRadius: '6px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              {analysis.industryType} Industry
+            </span>
+          )}
+          {analysis.analysisDepth && (
+            <span style={{
+              padding: '4px 8px',
+              fontSize: '11px',
+              fontWeight: '600',
+              backgroundColor: '#dcfce7',
+              color: '#166534',
+              borderRadius: '6px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              {analysis.analysisDepth}
+            </span>
+          )}
+        </div>
+      )}
+
       {analysis.risks.length > 0 && (
         <div className="privacy-risks" style={{ marginBottom: '20px' }}>          <strong style={{ 
             fontSize: '16px', 
@@ -181,6 +220,44 @@ const PrivacyAnalysis: React.FC<PrivacyAnalysisProps> = ({ analysis }) => {
               >
                 {company}
               </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Positive Features */}
+      {analysis.positiveFeatures && analysis.positiveFeatures.length > 0 && (
+        <div style={{ marginBottom: '20px' }}>
+          <strong style={{ 
+            fontSize: '14px', 
+            color: '#166534', 
+            display: 'block', 
+            marginBottom: '12px',
+            fontWeight: '700'
+          }}>
+            ✅ Positive Privacy Practices
+          </strong>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {analysis.positiveFeatures.map((feature: string, index: number) => (
+              <div key={index} style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+                padding: '8px 12px',
+                background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)',
+                borderRadius: '12px',
+                border: '1px solid #86efac',
+                fontSize: '13px',
+                lineHeight: '1.4'
+              }}>
+                <span style={{ 
+                  color: '#059669', 
+                  fontSize: '16px', 
+                  flexShrink: 0,
+                  marginTop: '2px'
+                }}>✓</span>
+                <span style={{ color: '#166534', fontWeight: '500' }}>{feature}</span>
+              </div>
             ))}
           </div>
         </div>

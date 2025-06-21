@@ -10,6 +10,10 @@ export interface PrivacyPolicyAnalysis {
   risks: string[];
   summary: string;
   dataSharing: string[];
+  industryType?: string;
+  positiveFeatures?: string[];
+  analysisDepth?: string;
+  lastAnalyzed?: string;
 }
 
 export interface DataFlowNode {

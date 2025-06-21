@@ -29741,7 +29741,7 @@ const App = () => {
                   box-shadow: 0 8px 24px rgba(220, 38, 38, 0.3);
                   border: 2px solid #fecaca;
                 ">
-                  🛡️ Privacy Reset Complete - Permissions & Data Cleared
+                  Privacy Reset Complete - Permissions & Data Cleared
                 </div>
               `;
                             document.body.appendChild(notification);

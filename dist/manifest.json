@@ -7,15 +7,16 @@
     "32": "logo.png",
     "48": "logo.png",
     "128": "logo.png"
-  },
-  "permissions": [
+  },  "permissions": [
     "activeTab",
     "tabs",
     "storage",
     "webRequest",
     "webNavigation",
     "declarativeNetRequest",
-    "scripting"
+    "scripting",
+    "cookies",
+    "browsingData"
   ],
   "host_permissions": [
     "<all_urls>"

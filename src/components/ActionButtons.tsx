@@ -8,25 +8,27 @@ interface ActionButtonsProps {
 }
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({ 
-  onOptOut, 
+  onOptOut,
   onAnalyzePolicy, 
   hasPrivacyAnalysis,
   analyzingPolicy = false
 }) => {
   return (
-    <div className="action-buttons">      
-    <button 
+    <div className="action-buttons">
+      <button 
         className="btn btn-primary"
         onClick={onOptOut}
-        title="Exercise your GDPR/CCPA rights and opt-out of tracking"
+        title="Revoke all permissions and clear cookies for this website"
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '8px'
+          gap: '8px',
+          background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+          borderColor: '#dc2626'
         }}
       >
-        <span>Quick Opt-out</span>
+        <span>1-Click Opt-out</span>
       </button>
       
       {!hasPrivacyAnalysis && (

@@ -29227,12 +29227,14 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react/jsx-runtime */ "./node_modules/react/jsx-runtime.js");
 
 const ActionButtons = ({ onOptOut, onAnalyzePolicy, hasPrivacyAnalysis, analyzingPolicy = false }) => {
-    return ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "action-buttons", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("button", { className: "btn btn-primary", onClick: onOptOut, title: "Exercise your GDPR/CCPA rights and opt-out of tracking", style: {
+    return ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "action-buttons", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("button", { className: "btn btn-primary", onClick: onOptOut, title: "Revoke all permissions and clear cookies for this website", style: {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px'
-                }, children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { children: "Quick Opt-out" }) }), !hasPrivacyAnalysis && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("button", { className: "btn btn-secondary", onClick: onAnalyzePolicy, disabled: analyzingPolicy, title: "Analyze the privacy policy with AI", style: {
+                    gap: '8px',
+                    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                    borderColor: '#dc2626'
+                }, children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { children: "1-Click Opt-out" }) }), !hasPrivacyAnalysis && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("button", { className: "btn btn-secondary", onClick: onAnalyzePolicy, disabled: analyzingPolicy, title: "Analyze the privacy policy with AI", style: {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -29674,18 +29676,87 @@ const App = () => {
     const handleOptOut = async () => {
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (!tab.id)
+            if (!tab.url)
                 return;
-            await chrome.scripting.executeScript({
-                target: { tabId: tab.id },
-                func: () => {
-                    // Trigger opt-out in content script
-                    window.postMessage({ type: 'KAVACH_TRIGGER_OPTOUT' }, '*');
+            const url = new URL(tab.url);
+            const origin = url.origin;
+            const domain = url.hostname;
+            // Clear all cookies for this domain
+            await chrome.cookies.getAll({ domain }, async (cookies) => {
+                for (const cookie of cookies) {
+                    await chrome.cookies.remove({
+                        url: `${cookie.secure ? 'https' : 'http'}://${cookie.domain}${cookie.path}`,
+                        name: cookie.name
+                    });
                 }
             });
+            // Clear all storage data for this origin
+            await chrome.browsingData.remove({
+                origins: [origin]
+            }, {
+                localStorage: true,
+                indexedDB: true,
+                webSQL: true,
+                serviceWorkers: true,
+                cacheStorage: true,
+                fileSystems: true
+            }); // Revoke permissions for this origin (only the ones that can be revoked)
+            try {
+                await chrome.permissions.remove({
+                    origins: [origin]
+                });
+            }
+            catch (e) {
+                // Permissions might not be removable, continue
+                console.log('Could not revoke permissions:', e);
+            }
+            // Send message to content script to perform additional cleanup
+            if (tab.id) {
+                await chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    func: () => {
+                        // Clear localStorage and sessionStorage
+                        try {
+                            localStorage.clear();
+                            sessionStorage.clear();
+                            // Set opt-out cookies
+                            document.cookie = "gdpr_consent=false; path=/; max-age=31536000; SameSite=Strict";
+                            document.cookie = "ccpa_optout=true; path=/; max-age=31536000; SameSite=Strict";
+                            document.cookie = "privacy_optout=true; path=/; max-age=31536000; SameSite=Strict";
+                            // Show notification
+                            const notification = document.createElement('div');
+                            notification.innerHTML = `
+                <div style="
+                  position: fixed;
+                  top: 20px;
+                  right: 20px;
+                  z-index: 10002;
+                  background: #dc2626;
+                  color: white;
+                  padding: 16px 20px;
+                  border-radius: 12px;
+                  font-family: system-ui, -apple-system, sans-serif;
+                  font-size: 14px;
+                  font-weight: 600;
+                  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.3);
+                  border: 2px solid #fecaca;
+                ">
+                  🛡️ Privacy Reset Complete - Permissions & Data Cleared
+                </div>
+              `;
+                            document.body.appendChild(notification);
+                            setTimeout(() => notification.remove(), 4000);
+                        }
+                        catch (e) {
+                            console.error('Failed to clear storage:', e);
+                        }
+                    }
+                });
+            }
+            console.log('✅ Successfully cleared cookies, storage, and permissions for:', domain);
         }
         catch (error) {
-            console.error('Failed to trigger opt-out:', error);
+            console.error('Failed to perform opt-out:', error);
         }
     };
     const handleAnalyzePolicy = async () => {
@@ -29734,7 +29805,7 @@ const App = () => {
     if (loading) {
         return ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "app", children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "loading", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "loading-logo", children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("img", { src: "logo.png", alt: "Kavach Logo", className: "logo-image" }) }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "spinner" }), "Loading site data..."] }) }));
     }
-    return ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "app", children: ["      ", (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("header", { className: "header", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "logo", children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("img", { src: "logo.png", alt: "Kavach Logo", className: "logo-image" }) }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "header-text", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("h1", { children: "Kavach" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("p", { children: "Privacy Guardian" })] })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "content", children: siteData ? ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.Fragment, { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_TrustScore__WEBPACK_IMPORTED_MODULE_2__["default"], { score: siteData.trustScore, url: currentUrl }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "section", children: ["              ", (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "section-header", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "section-title", children: "Tracker Blocking" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: `toggle-switch ${blockingEnabled ? 'active' : ''}`, onClick: () => handleToggleBlocking(!blockingEnabled) })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_TrackerList__WEBPACK_IMPORTED_MODULE_3__["default"], { trackers: siteData.trackers })] }), siteData.privacyAnalysis && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_PrivacyAnalysis__WEBPACK_IMPORTED_MODULE_4__["default"], { analysis: siteData.privacyAnalysis })), "            ", (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "section", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "section-title", style: { marginBottom: '20px' }, children: "Data Flow" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_DataFlowVisualization__WEBPACK_IMPORTED_MODULE_5__["default"], { dataFlow: siteData.dataFlow })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_ActionButtons__WEBPACK_IMPORTED_MODULE_6__["default"], { onOptOut: handleOptOut, onAnalyzePolicy: handleAnalyzePolicy, hasPrivacyAnalysis: !!siteData.privacyAnalysis, analyzingPolicy: analyzingPolicy }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "debug-section", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("button", { onClick: handleDebugInfo, className: "debug-button", children: "\uD83D\uDC1B Debug Info" }), debugInfo && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "debug-info", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("p", { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("strong", { children: "Tracked Domains:" }), " ", debugInfo.totalSites] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("p", { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("strong", { children: "Current Domain:" }), " ", new URL(currentUrl).hostname] }), debugInfo.siteDataSnapshot.length > 0 && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("details", { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("summary", { children: "Site Data" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("pre", { children: JSON.stringify(debugInfo.siteDataSnapshot, null, 2) })] }))] }))] })] })) : ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "empty-state", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "empty-state-logo", children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("img", { src: "logo.png", alt: "Kavach Logo", className: "logo-image" }) }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("p", { children: "No tracking data available for this site yet." }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("p", { children: "Navigate to a website to see privacy insights." })] })) })] }));
+    return ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "app", children: ["      ", (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("header", { className: "header", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "logo", children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("img", { src: "logo.png", alt: "Kavach Logo", className: "logo-image" }) }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "header-text", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("h1", { children: "Kavach" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("p", { children: "Privacy Guardian" })] })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "content", children: siteData ? ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.Fragment, { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_TrustScore__WEBPACK_IMPORTED_MODULE_2__["default"], { score: siteData.trustScore, url: currentUrl }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "section", children: ["              ", (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "section-header", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "section-title", children: "Tracker Blocking" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: `toggle-switch ${blockingEnabled ? 'active' : ''}`, onClick: () => handleToggleBlocking(!blockingEnabled) })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_TrackerList__WEBPACK_IMPORTED_MODULE_3__["default"], { trackers: siteData.trackers })] }), siteData.privacyAnalysis && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_PrivacyAnalysis__WEBPACK_IMPORTED_MODULE_4__["default"], { analysis: siteData.privacyAnalysis })), "            ", (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "section", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "section-title", style: { marginBottom: '20px' }, children: "Data Flow" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_DataFlowVisualization__WEBPACK_IMPORTED_MODULE_5__["default"], { dataFlow: siteData.dataFlow }), "            "] }), "            ", (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_ActionButtons__WEBPACK_IMPORTED_MODULE_6__["default"], { onOptOut: handleOptOut, onAnalyzePolicy: handleAnalyzePolicy, hasPrivacyAnalysis: !!siteData.privacyAnalysis, analyzingPolicy: analyzingPolicy }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "debug-section", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("button", { onClick: handleDebugInfo, className: "debug-button", children: "\uD83D\uDC1B Debug Info" }), debugInfo && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "debug-info", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("p", { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("strong", { children: "Tracked Domains:" }), " ", debugInfo.totalSites] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("p", { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("strong", { children: "Current Domain:" }), " ", new URL(currentUrl).hostname] }), debugInfo.siteDataSnapshot.length > 0 && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("details", { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("summary", { children: "Site Data" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("pre", { children: JSON.stringify(debugInfo.siteDataSnapshot, null, 2) })] }))] }))] })] })) : ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "empty-state", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "empty-state-logo", children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("img", { src: "logo.png", alt: "Kavach Logo", className: "logo-image" }) }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("p", { children: "No tracking data available for this site yet." }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("p", { children: "Navigate to a website to see privacy insights." })] })) })] }));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (App);
 

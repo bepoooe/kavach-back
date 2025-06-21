@@ -56,8 +56,7 @@ const App: React.FC = () => {
         enabled
       });
       
-      await chrome.storage.sync.set({ blockingEnabled: enabled });
-      setBlockingEnabled(enabled);
+      await chrome.storage.sync.set({ blockingEnabled: enabled });      setBlockingEnabled(enabled);
     } catch (error) {
       console.error('Failed to toggle blocking:', error);
     }
@@ -66,19 +65,95 @@ const App: React.FC = () => {
   const handleOptOut = async () => {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab.id) return;
+      if (!tab.url) return;
 
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: () => {
-          // Trigger opt-out in content script
-          window.postMessage({ type: 'KAVACH_TRIGGER_OPTOUT' }, '*');
+      const url = new URL(tab.url);
+      const origin = url.origin;
+      const domain = url.hostname;
+
+      // Clear all cookies for this domain
+      await chrome.cookies.getAll({ domain }, async (cookies) => {
+        for (const cookie of cookies) {
+          await chrome.cookies.remove({
+            url: `${cookie.secure ? 'https' : 'http'}://${cookie.domain}${cookie.path}`,
+            name: cookie.name
+          });
         }
       });
+
+      // Clear all storage data for this origin
+      await chrome.browsingData.remove({
+        origins: [origin]
+      }, {
+        localStorage: true,
+        indexedDB: true,
+        webSQL: true,
+        serviceWorkers: true,
+        cacheStorage: true,
+        fileSystems: true
+      });      // Revoke permissions for this origin (only the ones that can be revoked)
+      try {
+        await chrome.permissions.remove({
+          origins: [origin]
+        });
+      } catch (e) {
+        // Permissions might not be removable, continue
+        console.log('Could not revoke permissions:', e);
+      }
+
+      // Send message to content script to perform additional cleanup
+      if (tab.id) {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: () => {
+            // Clear localStorage and sessionStorage
+            try {
+              localStorage.clear();
+              sessionStorage.clear();
+              
+              // Set opt-out cookies
+              document.cookie = "gdpr_consent=false; path=/; max-age=31536000; SameSite=Strict";
+              document.cookie = "ccpa_optout=true; path=/; max-age=31536000; SameSite=Strict";
+              document.cookie = "privacy_optout=true; path=/; max-age=31536000; SameSite=Strict";
+              
+              // Show notification
+              const notification = document.createElement('div');
+              notification.innerHTML = `
+                <div style="
+                  position: fixed;
+                  top: 20px;
+                  right: 20px;
+                  z-index: 10002;
+                  background: #dc2626;
+                  color: white;
+                  padding: 16px 20px;
+                  border-radius: 12px;
+                  font-family: system-ui, -apple-system, sans-serif;
+                  font-size: 14px;
+                  font-weight: 600;
+                  box-shadow: 0 8px 24px rgba(220, 38, 38, 0.3);
+                  border: 2px solid #fecaca;
+                ">
+                  🛡️ Privacy Reset Complete - Permissions & Data Cleared
+                </div>
+              `;
+              document.body.appendChild(notification);
+              setTimeout(() => notification.remove(), 4000);
+            } catch (e) {
+              console.error('Failed to clear storage:', e);
+            }
+          }
+        });
+      }
+
+      console.log('✅ Successfully cleared cookies, storage, and permissions for:', domain);
+      
     } catch (error) {
-      console.error('Failed to trigger opt-out:', error);
+      console.error('Failed to perform opt-out:', error);
     }
-  };  const handleAnalyzePolicy = async () => {
+  };
+
+  const handleAnalyzePolicy = async () => {
     if (!siteData || analyzingPolicy) return;
 
     setAnalyzingPolicy(true);
@@ -171,8 +246,7 @@ const App: React.FC = () => {
               <div className="section-title" style={{ marginBottom: '20px' }}>
                 Data Flow
               </div>
-              <DataFlowVisualization dataFlow={siteData.dataFlow} />
-            </div><ActionButtons 
+              <DataFlowVisualization dataFlow={siteData.dataFlow} />            </div>            <ActionButtons 
               onOptOut={handleOptOut}
               onAnalyzePolicy={handleAnalyzePolicy}
               hasPrivacyAnalysis={!!siteData.privacyAnalysis}

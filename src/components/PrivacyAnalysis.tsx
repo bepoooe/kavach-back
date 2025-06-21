@@ -23,7 +23,7 @@ const PrivacyAnalysis: React.FC<PrivacyAnalysisProps> = ({ analysis }) => {
   return (
     <div className="section">
       <div className="section-title">
-        📋 AI Privacy Policy Analysis
+        AI Privacy Policy Analysis
       </div>
       
       {/* Privacy Score Bar */}

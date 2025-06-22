@@ -5,13 +5,32 @@ class BackgroundService {
   private siteData = new Map<string, SiteData>();
   private blockedRequests = new Map<string, number>();
   private privacyPolicyUrls = new Map<string, string[]>();
+
   constructor() {
     console.log('🚀 Kavach Background Service starting...');
     this.setupRequestBlocking();
     this.setupTabListeners();
     this.setupMessageListeners();
     console.log('✅ Kavach Background Service initialized');
-  }private setupRequestBlocking() {
+  }
+
+  private safeParseURL(url: string): URL | null {
+    try {
+      if (!url || typeof url !== 'string') {
+        console.warn('❌ Invalid URL input:', url);
+        return null;
+      }
+      return new URL(url);
+    } catch (error) {
+      console.warn('❌ Failed to parse URL:', url, error);
+      return null;
+    }
+  }
+
+  private getDomainFromURL(url: string): string | null {
+    const parsedUrl = this.safeParseURL(url);
+    return parsedUrl ? parsedUrl.hostname : null;
+  }  private setupRequestBlocking() {
     console.log('🛡️ Kavach: Setting up request blocking...');
     
     // Monitor web requests to track third-party requests
@@ -21,10 +40,10 @@ class BackgroundService {
         
         if (details.type === 'main_frame') return {};
         
-        const url = new URL(details.url);
-        const initiatorUrl = details.initiator ? new URL(details.initiator) : null;
+        const url = this.safeParseURL(details.url);
+        const initiatorUrl = details.initiator ? this.safeParseURL(details.initiator) : null;
         
-        if (initiatorUrl && url.hostname !== initiatorUrl.hostname) {
+        if (url && initiatorUrl && url.hostname !== initiatorUrl.hostname) {
           console.log('🚨 Third-party request:', url.hostname, 'from', initiatorUrl.hostname);
           this.trackThirdPartyRequest(initiatorUrl.hostname, url.hostname, details.type);
         }
@@ -34,12 +53,11 @@ class BackgroundService {
       { urls: ['<all_urls>'] },
       ['requestBody']
     );
-  }
-  private setupTabListeners() {
+  }  private setupTabListeners() {
     console.log('👂 Setting up tab listeners...');
     
     chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-      if (changeInfo.status === 'complete' && tab.url) {
+      if (changeInfo.status === 'complete' && tab.url && this.isValidHttpUrl(tab.url)) {
         console.log('📄 Tab completed loading:', tab.url);
         this.initializeSiteData(tab.url);
       }
@@ -49,7 +67,7 @@ class BackgroundService {
     chrome.tabs.onActivated.addListener(async (activeInfo) => {
       try {
         const tab = await chrome.tabs.get(activeInfo.tabId);
-        if (tab.url) {
+        if (tab.url && this.isValidHttpUrl(tab.url)) {
           console.log('🔄 Tab activated:', tab.url);
           this.initializeSiteData(tab.url);
         }
@@ -57,6 +75,15 @@ class BackgroundService {
         console.log('❌ Error getting active tab:', error);
       }
     });
+  }
+
+  private isValidHttpUrl(url: string): boolean {
+    try {
+      const parsedUrl = new URL(url);
+      return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+    } catch {
+      return false;
+    }
   }private trackThirdPartyRequest(sourceDomain: string, trackerDomain: string, requestType: string) {
     console.log('📊 Tracking third-party request:', { sourceDomain, trackerDomain, requestType });
     
@@ -135,7 +162,12 @@ class BackgroundService {
       });
     }
   }  private initializeSiteData(url: string) {
-    const domain = new URL(url).hostname;
+    const domain = this.getDomainFromURL(url);
+    if (!domain) {
+      console.warn('❌ Cannot initialize site data for invalid URL:', url);
+      return;
+    }
+    
     console.log('🏠 Initializing site data for:', domain);
     
     if (!this.siteData.has(domain)) {
@@ -174,7 +206,11 @@ class BackgroundService {
       console.log('♻️ Site data already exists for domain:', domain);
     }
   }  async getSiteData(url: string): Promise<SiteData | null> {
-    const domain = new URL(url).hostname;
+    const domain = this.getDomainFromURL(url);
+    if (!domain) {
+      console.warn('❌ Cannot get site data for invalid URL:', url);
+      return null;
+    }
     
     // Ensure site data exists for this domain
     if (!this.siteData.has(domain)) {
@@ -241,14 +277,21 @@ class BackgroundService {
       }
     });
   }
-
   private storePrivacyPolicyUrls(siteUrl: string, policyUrls: string[]) {
-    const domain = new URL(siteUrl).hostname;
+    const domain = this.getDomainFromURL(siteUrl);
+    if (!domain) {
+      console.warn('❌ Cannot store privacy policy URLs for invalid URL:', siteUrl);
+      return;
+    }
     this.privacyPolicyUrls.set(domain, policyUrls);
   }
-
   async analyzePrivacyPolicy(siteUrl: string): Promise<any> {
-    const domain = new URL(siteUrl).hostname;
+    const domain = this.getDomainFromURL(siteUrl);
+    if (!domain) {
+      console.warn('❌ Cannot analyze privacy policy for invalid URL:', siteUrl);
+      return { error: 'Invalid URL provided' };
+    }
+    
     const policyUrls = this.privacyPolicyUrls.get(domain) || [];
       // If no privacy policy URLs found, try to find them with enhanced detection
     if (policyUrls.length === 0) {

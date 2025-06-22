@@ -23,12 +23,35 @@ const TrustScore: React.FC<TrustScoreProps> = ({ score, url }) => {
     } catch {
       return url;
     }
-  };
-  return (    <div className="trust-score">
+  };  return (
+    <div className="trust-score">
       <div className={`score-circle ${getScoreClass(score)}`}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '36px', fontWeight: '800' }}>
+        <div style={{ 
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative'
+        }}>          <div style={{ 
+            fontSize: '42px', 
+            fontWeight: '900',
+            lineHeight: '1',
+            textShadow: '0 3px 10px rgba(0, 0, 0, 0.4)',
+            filter: 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.3))',
+            letterSpacing: '1px'
+          }}>
             {score}
+          </div>
+          <div style={{ 
+            fontSize: '10px', 
+            fontWeight: '700',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            marginTop: '2px',
+            opacity: 0.9
+          }}>
+            SCORE
           </div>
         </div>
       </div>

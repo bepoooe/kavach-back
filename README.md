@@ -91,9 +91,9 @@ npm run build
 - Hot reload for both frontend and backend
 
 ### Production Mode
-- Deploy backend to [Render](https://render.com) (free tier available)
-- Update API URL in `src/utils/privacy.ts`
-- Rebuild extension for production use
+- Backend deployed to Render: **https://kavach-hackolution.onrender.com**
+- Real AI-powered privacy analysis in production
+- Rebuild extension for production use: `npm run build`
 
 ## 📚 Documentation
 

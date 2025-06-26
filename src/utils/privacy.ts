@@ -22,10 +22,10 @@ export class TrustScoreCalculator {
 }
 
 export class PrivacyPolicyAnalyzer {
-  // Update this URL to your deployed Render API endpoint
+  // Production Render API endpoint
   private static readonly API_BASE_URL = process.env.NODE_ENV === 'production' 
-    ? 'https://your-kavach-backend.onrender.com/api'
-    : 'http://localhost:3000/api';
+    ? 'https://kavach-hackolution.onrender.com/api'
+    : 'https://kavach-hackolution.onrender.com/api'; // Use production API for both dev and prod
 
   static async analyzePolicy(url: string): Promise<any> {
     try {

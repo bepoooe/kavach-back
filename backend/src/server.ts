@@ -67,8 +67,24 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Debug endpoint to list available routes
+app.get('/api', (req, res) => {
+  res.status(200).json({
+    status: 'Kavach Privacy Guardian API',
+    version: '1.0.0',
+    endpoints: {
+      'GET /health': 'Health check',
+      'POST /api/privacy-policy/analyze': 'Analyze privacy policy',
+      'GET /api/privacy-policy/find': 'Find privacy policy URL'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 // API routes
+console.log('🔗 Registering API routes...');
 app.use('/api/privacy-policy', privacyPolicyRouter);
+console.log('✅ Privacy policy routes registered');
 
 // Error handling middleware (should be last)
 app.use(errorHandler);

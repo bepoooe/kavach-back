@@ -69,12 +69,9 @@
    ```
 
 ### 4. **Update Chrome Extension**
-   After deployment, update the API URL in your Chrome extension:
+   After deployment, your API is now live at: **https://kavach-hackolution.onrender.com**
    
-   Edit `src/utils/privacy.ts`:
-   ```typescript
-   private static readonly API_BASE_URL = 'https://your-app-name.onrender.com/api';
-   ```
+   The extension is already configured to use this endpoint!
 
 ## 🧪 Testing Your Integration
 

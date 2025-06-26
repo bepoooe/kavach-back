@@ -52,10 +52,17 @@ export class EnhancedPolicyService {
 
       if (this.apifyScraper) {
         try {
-          console.log(`🕷️ Finding additional privacy pages with Apify`);
+          console.log(`🕷️ Finding additional privacy pages with Apify (with timeout)`);
           
-          // Find additional privacy-related URLs
-          const additionalUrls = await this.apifyScraper.findPrivacyPages(websiteUrl);
+          // Add timeout wrapper for Apify operations
+          const findPrivacyPagesWithTimeout = Promise.race([
+            this.apifyScraper.findPrivacyPages(websiteUrl),
+            new Promise<string[]>((_, reject) => 
+              setTimeout(() => reject(new Error('Apify findPrivacyPages timeout')), 30000)
+            )
+          ]);
+          
+          const additionalUrls = await findPrivacyPagesWithTimeout;
           
           // Filter out the main policy URL to avoid duplicates
           const uniqueUrls = additionalUrls.filter(url => 
@@ -66,9 +73,17 @@ export class EnhancedPolicyService {
           if (uniqueUrls.length > 0) {
             console.log(`🔗 Found ${uniqueUrls.length} additional privacy-related URLs`);
             
-            // Scrape additional pages with Apify
-            const urlsToScrape = [primaryPolicyUrl, ...uniqueUrls.slice(0, 5)]; // Limit to avoid too many requests
-            additionalContent = await this.apifyScraper.scrapePrivacyPolicyPages(websiteUrl, urlsToScrape);
+            // Scrape additional pages with Apify (with timeout and limit)
+            const urlsToScrape = [primaryPolicyUrl, ...uniqueUrls.slice(0, 3)]; // Reduced limit
+            
+            const scrapeWithTimeout = Promise.race([
+              this.apifyScraper.scrapePrivacyPolicyPages(websiteUrl, urlsToScrape),
+              new Promise<any[]>((_, reject) => 
+                setTimeout(() => reject(new Error('Apify scraping timeout')), 45000)
+              )
+            ]);
+            
+            additionalContent = await scrapeWithTimeout;
             
             // Remove the primary content from additional results
             additionalContent = additionalContent.filter(content => 
@@ -87,7 +102,15 @@ export class EnhancedPolicyService {
       if (primaryContent.text.length < 1000 && this.apifyScraper) {
         try {
           console.log(`📝 Primary content too short, enhancing with Apify`);
-          const apifyResults = await this.apifyScraper.scrapePrivacyPolicyPages(websiteUrl, [primaryPolicyUrl]);
+          
+          const enhanceWithTimeout = Promise.race([
+            this.apifyScraper.scrapePrivacyPolicyPages(websiteUrl, [primaryPolicyUrl]),
+            new Promise<any[]>((_, reject) => 
+              setTimeout(() => reject(new Error('Apify primary enhancement timeout')), 20000)
+            )
+          ]);
+          
+          const apifyResults = await enhanceWithTimeout;
           
           if (apifyResults.length > 0 && apifyResults[0].text.length > primaryContent.text.length) {
             // Replace primary content with better Apify result

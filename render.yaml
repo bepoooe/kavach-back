@@ -3,7 +3,7 @@ services:
     name: kavach-backend
     env: node
     plan: free
-    buildCommand: chmod +x build.sh && ./build.sh
+    buildCommand: npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -18,4 +18,5 @@ services:
         value: "900000"
       - key: RATE_LIMIT_MAX_REQUESTS
         value: "1000"
+    healthCheckPath: /health
     healthCheckPath: /health

@@ -27,17 +27,20 @@ export interface ApifyActorInput {
 
 export class ApifyScraper {
   private readonly client: ApifyClient;
-  private readonly actorId: string = 'aYG0l9s7dbB7j3gbS';
+  private readonly actorId: string = 'aYG0l9s7dbB7j3gbS'; // Web Scraper 
+  private readonly lightActorId: string = 'apify/cheerio-scraper'; // Lighter alternative
 
   constructor() {
     const apiKey = process.env.APIFY_API_KEY || 'apify_api_EsvCiOOlJobxaZnJ3Klnyucd5IRdgq4CsoP3';
-    if (!apiKey) {
-      throw new Error('APIFY_API_KEY environment variable is required');
+    if (!apiKey || apiKey === 'your_actual_apify_api_key_here') {
+      throw new Error('APIFY_API_KEY environment variable is required and must be set to a valid Apify API key');
     }
     
     this.client = new ApifyClient({
       token: apiKey,
     });
+    
+    console.log('🕷️ Apify client initialized with actors:', this.actorId, 'and', this.lightActorId);
   }
 
   /**
@@ -47,29 +50,20 @@ export class ApifyScraper {
     try {
       console.log(`🕷️ Starting Apify scraping for ${privacyPolicyUrls.length} privacy policy URLs`);
 
-      // Prepare the input for the Apify actor
-      const actorInput: ApifyActorInput = {
-        startUrls: privacyPolicyUrls.map(url => ({ url })),
-        linkSelector: 'a[href*="privacy"], a[href*="policy"], a[href*="terms"], a[href*="cookie"]',
-        pageFunction: this.createPageFunction(),
-        maxRequestsPerCrawl: 50,
-        maxConcurrency: 5,
-        requestTimeoutSecs: 60,
-        maxScrollHeightPixels: 5000,
-        maxSessionRotations: 10
-      };
+      // Try main actor first, then fallback to lighter actor
+      let results;
+      try {
+        results = await this.scrapeWithActor(this.actorId, websiteUrl, privacyPolicyUrls);
+      } catch (error: any) {
+        if (error.type === 'actor-memory-limit-exceeded' || error.statusCode === 402) {
+          console.log('🔄 Main actor memory limit exceeded, trying lighter actor...');
+          results = await this.scrapeWithLightActor(websiteUrl, privacyPolicyUrls);
+        } else {
+          throw error;
+        }
+      }
 
-      // Start the actor run
-      const run = await this.client.actor(this.actorId).call(actorInput);
-
-      console.log(`🚀 Apify actor run completed with ID: ${run.id}`);
-
-      // Get the results
-      const { items } = await this.client.dataset(run.defaultDatasetId).listItems();
-      
-      console.log(`✅ Apify scraping completed. Found ${items.length} results`);
-
-      return this.processApifyResults(items, websiteUrl);
+      return this.processApifyResults(results, websiteUrl);
 
     } catch (error) {
       console.error('Error in Apify scraping:', error);
@@ -77,28 +71,135 @@ export class ApifyScraper {
     }
   }
 
+  private async scrapeWithActor(actorId: string, websiteUrl: string, privacyPolicyUrls: string[]): Promise<any[]> {
+    // Prepare the input for the Apify actor
+    const actorInput: ApifyActorInput = {
+      startUrls: privacyPolicyUrls.map(url => ({ url })),
+      linkSelector: 'a[href*="privacy"], a[href*="policy"], a[href*="terms"], a[href*="cookie"]',
+      pageFunction: this.createPageFunction(),
+      maxRequestsPerCrawl: 10, // Reduced for faster execution
+      maxConcurrency: 3, // Reduced to avoid rate limits
+      requestTimeoutSecs: 30, // Reduced timeout
+      maxScrollHeightPixels: 3000, // Reduced scrolling
+      maxSessionRotations: 5 // Reduced rotations
+    };
+
+    // Start the actor run
+    const run = await this.client.actor(actorId).call(actorInput);
+
+    console.log(`🚀 Apify actor run completed with ID: ${run.id}`);
+
+    // Get the results
+    const { items } = await this.client.dataset(run.defaultDatasetId).listItems();
+    
+    console.log(`✅ Apify scraping completed. Found ${items.length} results`);
+
+    return items;
+  }
+
+  private async scrapeWithLightActor(websiteUrl: string, privacyPolicyUrls: string[]): Promise<any[]> {
+    console.log(`🪶 Using lightweight Cheerio scraper for ${privacyPolicyUrls.length} URLs`);
+    
+    const actorInput = {
+      startUrls: privacyPolicyUrls.map(url => ({ url })),
+      maxRequestsPerCrawl: 5,
+      maxConcurrency: 2,
+      requestTimeoutSecs: 20,
+      pageFunction: `
+        async function pageFunction(context) {
+          const $ = context.$;
+          const request = context.request;
+          
+          // Remove scripts and styles
+          $('script, style, nav, header, footer').remove();
+          
+          // Try to get main content
+          const content = $('main, .main-content, .content, .policy-content, .privacy-policy, article').first();
+          const text = content.length ? content.text() : $('body').text();
+          
+          return {
+            url: request.url,
+            text: text.replace(/\\s+/g, ' ').trim(),
+            title: $('title').text() || $('h1').first().text() || 'Privacy Policy',
+            wordCount: text.split(/\\s+/).length
+          };
+        }
+      `
+    };
+
+    const run = await this.client.actor(this.lightActorId).call(actorInput);
+    console.log(`🚀 Lightweight actor run completed with ID: ${run.id}`);
+
+    const { items } = await this.client.dataset(run.defaultDatasetId).listItems();
+    console.log(`✅ Lightweight scraping completed. Found ${items.length} results`);
+
+    return items;
+  }
+
   /**
    * Finds additional privacy-related pages on a website
    */
   async findPrivacyPages(websiteUrl: string): Promise<string[]> {
     try {
-      const actorInput: ApifyActorInput = {
-        startUrls: [{ url: websiteUrl }],
-        linkSelector: 'a[href*="privacy"], a[href*="policy"], a[href*="terms"], a[href*="cookie"], a[href*="legal"], a[href*="data"]',
-        pageFunction: this.createLinkFinderFunction(),
-        maxRequestsPerCrawl: 10,
-        maxConcurrency: 2,
-        requestTimeoutSecs: 30,
-        maxScrollHeightPixels: 3000
-      };
+      // Try main actor first
+      let items;
+      try {
+        const actorInput: ApifyActorInput = {
+          startUrls: [{ url: websiteUrl }],
+          linkSelector: 'a[href*="privacy"], a[href*="policy"], a[href*="terms"], a[href*="cookie"], a[href*="legal"], a[href*="data"]',
+          pageFunction: this.createLinkFinderFunction(),
+          maxRequestsPerCrawl: 5, // Reduced for faster discovery
+          maxConcurrency: 2,
+          requestTimeoutSecs: 20, // Reduced timeout
+          maxScrollHeightPixels: 2000 // Reduced scrolling
+        };
 
-      const run = await this.client.actor(this.actorId).call(actorInput);
+        const run = await this.client.actor(this.actorId).call(actorInput);
+        console.log(`🔍 Finding privacy pages completed with run ID: ${run.id}`);
 
-      console.log(`🔍 Finding privacy pages completed with run ID: ${run.id}`);
+        const results = await this.client.dataset(run.defaultDatasetId).listItems();
+        items = results.items;
+      } catch (error: any) {
+        if (error.type === 'actor-memory-limit-exceeded' || error.statusCode === 402) {
+          console.log('🔄 Main actor memory limit exceeded for link finding, trying lighter approach...');
+          
+          // Use lightweight scraper for link finding
+          const lightActorInput = {
+            startUrls: [{ url: websiteUrl }],
+            maxRequestsPerCrawl: 2,
+            maxConcurrency: 1,
+            requestTimeoutSecs: 15,
+            pageFunction: `
+              async function pageFunction(context) {
+                const $ = context.$;
+                const links = [];
+                
+                $('a[href*="privacy"], a[href*="policy"], a[href*="terms"], a[href*="cookie"], footer a, .footer a').each((i, el) => {
+                  const href = $(el).attr('href');
+                  const text = $(el).text().toLowerCase();
+                  
+                  if (href && (text.includes('privacy') || text.includes('policy') || text.includes('terms') || text.includes('cookie'))) {
+                    links.push(href);
+                  }
+                });
+                
+                return {
+                  url: context.request.url,
+                  privacyLinks: [...new Set(links)]
+                };
+              }
+            `
+          };
 
-      const { items } = await this.client.dataset(run.defaultDatasetId).listItems();
+          const run = await this.client.actor(this.lightActorId).call(lightActorInput);
+          const results = await this.client.dataset(run.defaultDatasetId).listItems();
+          items = results.items;
+        } else {
+          throw error;
+        }
+      }
+
       const privacyUrls = this.extractPrivacyUrls(items);
-
       console.log(`🔗 Found ${privacyUrls.length} privacy-related URLs`);
 
       return privacyUrls;

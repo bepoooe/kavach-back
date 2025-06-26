@@ -311,29 +311,17 @@ class BackgroundService {
       return { error: 'Invalid URL provided' };
     }
 
-    console.log('🤖 Starting real-time privacy policy analysis for:', siteUrl);
+    console.log('🤖 Starting enhanced privacy policy analysis for:', siteUrl);
 
     try {
-      // First, try enhanced analysis with Apify + Gemini
-      const enhancedAnalysis = await this.callBackendAPI('/api/privacy-policy/analyze-enhanced', {
+      // Use enhanced analysis with Apify + Gemini (now default on /analyze)
+      const analysis = await this.callBackendAPI('/api/privacy-policy/analyze', {
         url: siteUrl
       });
 
-      if (enhancedAnalysis.success) {
+      if (analysis.success) {
         console.log('✅ Enhanced analysis completed successfully');
-        return this.formatAnalysisResponse(enhancedAnalysis.data, 'enhanced');
-      }
-
-      // Fallback to standard analysis if enhanced fails
-      console.log('⚠️ Enhanced analysis failed, trying standard analysis...');
-      const standardAnalysis = await this.callBackendAPI('/api/privacy-policy/analyze', {
-        url: siteUrl,
-        enhanced: false
-      });
-
-      if (standardAnalysis.success) {
-        console.log('✅ Standard analysis completed successfully');
-        return this.formatAnalysisResponse(standardAnalysis.data, 'standard');
+        return this.formatAnalysisResponse(analysis.data, 'enhanced');
       }
 
       // If backend is unavailable, use fallback analysis

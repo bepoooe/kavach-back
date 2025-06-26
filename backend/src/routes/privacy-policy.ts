@@ -8,7 +8,6 @@ const router = express.Router();
 interface AnalyzeRequest {
   url: string;
   policyUrl?: string;
-  enhanced?: boolean; // New option for enhanced analysis
 }
 
 interface AnalyzeResponse {
@@ -31,12 +30,12 @@ try {
 
 /**
  * POST /api/privacy-policy/analyze
- * Analyzes a website's privacy policy using AI
+ * Enhanced privacy policy analysis using Apify + Gemini integration
+ * (Redirects to enhanced analysis - standard analysis removed)
  */
 router.post('/analyze', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { url, policyUrl, enhanced = false }: AnalyzeRequest = req.body;
-    let useEnhancedAnalysis = enhanced;
+    const { url, policyUrl }: AnalyzeRequest = req.body;
 
     if (!url) {
       res.status(400).json({
@@ -46,7 +45,7 @@ router.post('/analyze', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    if (!analyzer) {
+    if (!analyzer || !enhancedService) {
       res.status(500).json({
         success: false,
         error: 'Privacy policy analyzer is not available. Please check server configuration.'
@@ -65,162 +64,9 @@ router.post('/analyze', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    let scrapedContent;
-    let isEnhancedAnalysis = false;
-
-    if (useEnhancedAnalysis && enhancedService) {
-      try {
-        console.log(`🔍 Starting enhanced privacy policy analysis for ${url}`);
-        const comprehensiveContent = await enhancedService.getComprehensivePrivacyContent(url, policyUrl);
-        
-        scrapedContent = {
-          text: comprehensiveContent.allContent,
-          url: comprehensiveContent.primary.url,
-          title: comprehensiveContent.primary.title,
-          lastModified: comprehensiveContent.primary.lastModified
-        };
-        
-        isEnhancedAnalysis = true;
-        console.log(`✅ Enhanced analysis found ${comprehensiveContent.metadata.totalPages} pages with ${comprehensiveContent.metadata.totalWordCount} words`);
-        
-      } catch (enhancedError) {
-        console.warn('Enhanced analysis failed, falling back to simple analysis:', enhancedError);
-        // Fall back to simple analysis
-        useEnhancedAnalysis = false;
-      }
-    }
-
-    if (!isEnhancedAnalysis) {
-      // Use simple analysis
-      let finalPolicyUrl = policyUrl;
-      
-      // If no specific policy URL provided, try to find it
-      if (!finalPolicyUrl) {
-        console.log(`🔍 Searching for privacy policy on ${url}`);
-        const foundPolicyUrl = await PolicyScraper.findPrivacyPolicyUrl(url);
-        
-        if (!foundPolicyUrl) {
-          res.status(404).json({
-            success: false,
-            error: 'No privacy policy found on this website'
-          } as AnalyzeResponse);
-          return;
-        }
-        
-        finalPolicyUrl = foundPolicyUrl;
-      }
-
-      console.log(`📄 Scraping privacy policy from ${finalPolicyUrl}`);
-      scrapedContent = await PolicyScraper.scrapePrivacyPolicy(finalPolicyUrl);
-    }
+    console.log(`� Starting enhanced privacy policy analysis for ${url} (via /analyze endpoint)`);
     
-    if (!scrapedContent.text || scrapedContent.text.length < 100) {
-      res.status(400).json({
-        success: false,
-        error: 'Privacy policy content is too short or empty'
-      } as AnalyzeResponse);
-      return;
-    }
-
-    const analysisType = isEnhancedAnalysis ? 'enhanced' : 'standard';
-    console.log(`🤖 Analyzing privacy policy with AI (${scrapedContent.text.length} characters, ${analysisType} mode)`);
-    
-    // Analyze with Gemini
-    const analysis = await analyzer.analyzePrivacyPolicy(scrapedContent.text, url, isEnhancedAnalysis);
-
-    const response: AnalyzeResponse = {
-      success: true,
-      data: {
-        summary: analysis.summary,
-        safety: analysis.safety,
-        ...(isEnhancedAnalysis && {
-          keyFindings: analysis.keyFindings,
-          scores: {
-            dataCollection: analysis.dataCollectionScore,
-            thirdParty: analysis.thirdPartyScore,
-            userRights: analysis.userRightsScore,
-            transparency: analysis.transparencyScore
-          }
-        }),
-        policyMetadata: {
-          url: scrapedContent.url,
-          title: scrapedContent.title,
-          lastModified: scrapedContent.lastModified,
-          contentLength: scrapedContent.text.length,
-          analysisType,
-          analyzedAt: new Date().toISOString()
-        }
-      },
-      policyUrl: scrapedContent.url
-    };
-
-    console.log(`✅ Analysis complete for ${url} - Safety: ${analysis.safety} (${analysisType})`);
-    res.json(response);
-
-  } catch (error) {
-    console.error('Error analyzing privacy policy:', error);
-    
-    let errorMessage = 'Failed to analyze privacy policy';
-    
-    if (error instanceof Error) {
-      if (error.message.includes('timeout')) {
-        errorMessage = 'Request timeout - the website took too long to respond';
-      } else if (error.message.includes('ENOTFOUND')) {
-        errorMessage = 'Website not found or not accessible';
-      } else if (error.message.includes('scrape')) {
-        errorMessage = 'Failed to extract privacy policy content';
-      } else if (error.message.includes('API')) {
-        errorMessage = 'AI analysis service temporarily unavailable';
-      } else {
-        errorMessage = error.message;
-      }
-    }
-
-    res.status(500).json({
-      success: false,
-      error: errorMessage
-    } as AnalyzeResponse);
-  }
-});
-
-/**
- * POST /api/privacy-policy/analyze-enhanced  
- * Enhanced privacy policy analysis using Apify integration
- */
-router.post('/analyze-enhanced', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { url, policyUrl }: AnalyzeRequest = req.body;
-
-    if (!url) {
-      res.status(400).json({
-        success: false,
-        error: 'Website URL is required'
-      } as AnalyzeResponse);
-      return;
-    }
-
-    if (!analyzer || !enhancedService) {
-      res.status(500).json({
-        success: false,
-        error: 'Enhanced privacy policy analyzer is not available. Please check server configuration.'
-      } as AnalyzeResponse);
-      return;
-    }
-
-    // Validate URL format
-    try {
-      new URL(url);
-    } catch {
-      res.status(400).json({
-        success: false,
-        error: 'Invalid URL format'
-      } as AnalyzeResponse);
-      return;
-    }
-
-    console.log(`🚀 Starting enhanced privacy policy analysis for ${url}`);
-    
-    // Use enhanced analysis
+    // Use enhanced analysis only
     const comprehensiveContent = await enhancedService.getComprehensivePrivacyContent(url, policyUrl);
     
     if (!comprehensiveContent.allContent || comprehensiveContent.allContent.length < 100) {
@@ -285,7 +131,7 @@ router.post('/analyze-enhanced', async (req: Request, res: Response): Promise<vo
       } else if (error.message.includes('API')) {
         errorMessage = 'AI analysis service temporarily unavailable';
       } else if (error.message.includes('Apify')) {
-        errorMessage = 'Enhanced scraping service temporarily unavailable, try standard analysis';
+        errorMessage = 'Enhanced scraping service temporarily unavailable';
       } else {
         errorMessage = error.message;
       }

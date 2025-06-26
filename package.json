@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "cd backend && npm ci && npm run build",
+    "build": "echo 'Building Kavach Backend...' && cd backend && npm ci && npm run build",
     "start": "node index.js",
     "postinstall": "cd backend && npm ci",
     "dev": "webpack --mode=development --watch",

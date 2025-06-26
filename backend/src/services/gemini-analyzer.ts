@@ -47,103 +47,58 @@ export class GeminiPrivacyAnalyzer {
 
   private createAnalysisPrompt(policyText: string, websiteUrl: string): string {
     return `
-You are a privacy expert analyzing a website's privacy policy. Please analyze the following privacy policy and provide a comprehensive assessment.
+You are a privacy expert analyzing a website's privacy policy. Analyze the following privacy policy and provide a concise assessment.
 
 Website URL: ${websiteUrl}
 
 Privacy Policy Text:
-${policyText.substring(0, 50000)} // Limit to avoid token limits
+${policyText.substring(0, 50000)}
 
-Please provide your analysis in the following JSON format (respond ONLY with valid JSON):
+Provide ONLY a 30-word paragraph analyzing how this privacy policy affects user rights. Focus on whether it protects or hinders user privacy and data control. Be direct and specific.
 
-{
-  "score": <number between 0-100, where 100 is most privacy-friendly>,
-  "risks": [
-    "<specific privacy risk 1>",
-    "<specific privacy risk 2>",
-    "<etc>"
-  ],
-  "summary": "<2-3 sentence summary of the main privacy concerns>",
-  "dataSharing": [
-    "<company/service 1 that data is shared with>",
-    "<company/service 2 that data is shared with>",
-    "<etc>"
-  ],
-  "recommendations": [
-    "<actionable recommendation 1>",
-    "<actionable recommendation 2>",
-    "<etc>"
-  ],
-  "complianceStatus": {
-    "gdpr": "<compliant|non-compliant|unclear>",
-    "ccpa": "<compliant|non-compliant|unclear>",
-    "coppa": "<compliant|non-compliant|unclear>"
-  },
-  "dataRetention": "<description of data retention policy>",
-  "userRights": [
-    "<user right 1 (e.g., right to deletion)>",
-    "<user right 2 (e.g., right to access)>",
-    "<etc>"
-  ],
-  "thirdPartySharing": <true|false>,
-  "cookiePolicy": "<summary of cookie usage and user control>"
-}
+Example format: "This policy significantly restricts user rights by allowing extensive data sharing with third parties without clear consent mechanisms, offering limited deletion options and vague retention periods."
 
-Focus on:
-1. Data collection practices and transparency
-2. Third-party sharing and partnerships
-3. User consent mechanisms
-4. Data retention policies
-5. User rights and control options
-6. Compliance with major privacy regulations (GDPR, CCPA, COPPA)
-7. Cookie and tracking practices
-8. Data security measures
-9. Contact information for privacy concerns
-10. Clear and understandable language
-
-Assign scores based on:
-- 90-100: Excellent privacy practices, full transparency, strong user control
-- 80-89: Good privacy practices with minor concerns
-- 70-79: Acceptable but with some notable issues
-- 60-69: Several concerning practices
-- 50-59: Poor privacy practices
-- Below 50: Very concerning or deceptive practices
-
-Be specific in identifying risks and provide actionable recommendations for users.
+Respond with exactly 30 words, no more, no less.
 `;
   }
 
   private parseGeminiResponse(responseText: string): PrivacyAnalysisResult {
     try {
-      // Clean the response to extract JSON
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No valid JSON found in response');
-      }
-
-      const cleanedResponse = jsonMatch[0]
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
-        .trim();
-
-      const parsed = JSON.parse(cleanedResponse);
+      // Clean the response text
+      const cleanedText = responseText.trim();
       
-      // Validate and provide defaults for required fields
+      // Count words to ensure it's around 30 words
+      const wordCount = cleanedText.split(' ').length;
+      
+      // Generate a basic score based on keywords in the response
+      const negativeKeywords = ['restricts', 'limits', 'hinders', 'unclear', 'vague', 'extensive sharing', 'poor', 'concerning', 'lacks'];
+      const positiveKeywords = ['protects', 'transparent', 'clear', 'strong', 'comprehensive', 'respects', 'empowers', 'secure'];
+      
+      let score = 50; // Base score
+      negativeKeywords.forEach(keyword => {
+        if (cleanedText.toLowerCase().includes(keyword)) score -= 5;
+      });
+      positiveKeywords.forEach(keyword => {
+        if (cleanedText.toLowerCase().includes(keyword)) score += 5;
+      });
+      
+      score = Math.max(0, Math.min(100, score));
+      
       return {
-        score: Math.max(0, Math.min(100, parsed.score || 50)),
-        risks: Array.isArray(parsed.risks) ? parsed.risks : ['Unable to analyze privacy risks'],
-        summary: parsed.summary || 'Privacy policy analysis unavailable',
-        dataSharing: Array.isArray(parsed.dataSharing) ? parsed.dataSharing : [],
-        recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
+        score: score,
+        risks: [cleanedText],
+        summary: cleanedText,
+        dataSharing: [],
+        recommendations: ['Review the full privacy policy for details', 'Contact website for privacy clarifications'],
         complianceStatus: {
-          gdpr: parsed.complianceStatus?.gdpr || 'unclear',
-          ccpa: parsed.complianceStatus?.ccpa || 'unclear',
-          coppa: parsed.complianceStatus?.coppa || 'unclear'
+          gdpr: 'unclear',
+          ccpa: 'unclear',
+          coppa: 'unclear'
         },
-        dataRetention: parsed.dataRetention || 'Data retention policy unclear',
-        userRights: Array.isArray(parsed.userRights) ? parsed.userRights : [],
-        thirdPartySharing: parsed.thirdPartySharing !== false,
-        cookiePolicy: parsed.cookiePolicy || 'Cookie policy information unavailable'
+        dataRetention: 'See full privacy policy for retention details',
+        userRights: [],
+        thirdPartySharing: cleanedText.toLowerCase().includes('sharing') || cleanedText.toLowerCase().includes('third'),
+        cookiePolicy: 'See full privacy policy for cookie details'
       };
     } catch (error) {
       console.error('Error parsing Gemini response:', error);

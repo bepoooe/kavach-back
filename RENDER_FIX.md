@@ -1,4 +1,31 @@
-# Render Deployment Summary - Enhanced Analysis Only
+# Render Deployment Fix - Enhanced Analysis Only
+
+## 🔧 DEPLOYMENT ISSUE FIXED:
+
+### **Problem**: `Cannot find module './dist/server.js'`
+The Render deployment was failing because the entry point `index.js` couldn't locate the compiled backend server due to path resolution issues in the Render environment.
+
+### **Solution**: Enhanced Path Resolution & Multiple Entry Points
+
+1. **Updated `index.js`** with robust path detection:
+   - Tries multiple possible server locations
+   - Better environment variable loading
+   - Detailed logging for debugging
+   - Proper working directory management
+
+2. **Created `start-server.js`** as alternative entry point:
+   - Direct server startup without complex path logic
+   - More reliable for containerized environments
+   - Fallback option if main entry fails
+
+3. **Updated `render.yaml`** to use more reliable startup:
+   - Changed from `npm start` to `node start-server.js`
+   - More direct server execution
+
+4. **Enhanced build logging** in `package.json`:
+   - Detailed build process logging
+   - Directory content verification
+   - Build success confirmation
 
 ## ✅ SUCCESSFULLY IMPLEMENTED:
 
@@ -29,17 +56,17 @@ Chrome Extension → POST /api/privacy-policy/analyze → Enhanced Analysis
                     Comprehensive Privacy Assessment
 ```
 
-## Files Ready for Deployment:
-- `render.yaml`
-- `index.js` 
-- `package.json`
-- `build-backend.sh` (optional)
-- `start-backend.sh` (optional)
+## Files Updated for Deployment Fix:
+- ✅ `index.js` - Enhanced path resolution and debugging
+- ✅ `start-server.js` - Alternative robust entry point  
+- ✅ `render.yaml` - Updated to use direct server startup
+- ✅ `package.json` - Enhanced build logging and verification
+- ✅ `build-render.sh` - Backup build script with detailed logging
 
 ## Expected Render Build Process:
-1. `npm run build` → Builds backend with enhanced Apify + Gemini integration
-2. `npm start` → Runs `index.js` which loads the enhanced backend server
-3. Backend server starts with only enhanced analysis available
+1. `npm run build` → Builds backend with detailed logging and verification
+2. `node start-server.js` → Directly starts the enhanced backend server
+3. Backend server starts with Apify + Gemini integration available
 
 ## Environment Variables to Set in Render:
 - `GEMINI_API_KEY=your_gemini_api_key` ✅ (Working)

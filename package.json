@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "echo 'Building Kavach Backend...' && cd backend && npm ci && npm run build",
+    "build": "echo 'Building Kavach Backend...' && echo 'Current directory:' && pwd && ls -la && cd backend && echo 'Installing backend dependencies...' && npm ci && echo 'Building backend...' && npm run build && echo 'Build complete!' && ls -la dist/",
     "start": "node index.js",
+    "start-alt": "node start-server.js",
     "postinstall": "cd backend && npm ci",
     "dev": "webpack --mode=development --watch",
     "build-extension": "webpack --mode=production",

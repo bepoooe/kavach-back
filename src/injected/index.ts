@@ -2,17 +2,25 @@
 (function() {
   'use strict';
 
-  // Track function calls that might indicate tracking
+  // Store the original fetch function
   const originalFetch = window.fetch;
-  // Override fetch to detect tracking requests
-  window.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
-    const url = typeof input === 'string' ? input : input.toString();
+
+  // Define a proxy fetch function to intercept requests
+  const trackingFetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const url = typeof input === 'string' ? input : (input as Request).url;
+
+    // Check for tracking patterns
     if (isTrackingRequest(url)) {
       console.log('Kavach: Detected tracking request via fetch:', url);
       reportTrackingAttempt(url, 'fetch');
     }
-    return originalFetch.call(this, input, init);
+
+    // Proceed with the original fetch call
+    return originalFetch.apply(window, [input, init] as any);
   };
+
+  // Replace the global fetch with the proxy
+  window.fetch = trackingFetch;
 
   // Detect common tracking patterns
   function isTrackingRequest(url: string): boolean {
@@ -46,7 +54,8 @@
   HTMLCanvasElement.prototype.toDataURL = function() {
     console.log('Kavach: Canvas fingerprinting detected');
     reportTrackingAttempt(window.location.href, 'canvas-fingerprint');
-    return originalToDataURL.apply(this, arguments as any);
+    const result = originalToDataURL.apply(this, arguments as any);
+    return result;
   };
 
   console.log('Kavach: Tracking detection initialized');

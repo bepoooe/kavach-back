@@ -245,6 +245,10 @@ class BackgroundService {
           this.getSiteData(request.url).then(sendResponse);
           return true;
         
+        case 'getFingerprintScript':
+          this.getFingerprintScript(request.apiKey).then(sendResponse);
+          return true;
+
         case 'toggleBlocking':
           this.toggleTrackerBlocking(request.enabled).then(() => {
             sendResponse({ success: true });
@@ -274,6 +278,15 @@ class BackgroundService {
           console.log('🐛 Debug info requested:', debugInfo);
           sendResponse(debugInfo);
           return true;
+        case 'runFingerprint':
+          if (request.tabId) {
+            this.handleFingerprinting(request.apiKey, request.tabId)
+              .then(sendResponse)
+              .catch(error => sendResponse({ success: false, error: error.message }));
+          } else {
+            sendResponse({ success: false, error: 'No tabId provided in the request.' });
+          }
+          return true; // Keep channel open for async response
       }
     });
   }
@@ -580,6 +593,99 @@ class BackgroundService {
       lastAnalyzed: new Date().toISOString()
     };
   }
+
+  async getFingerprintScript(apiKey: string): Promise<{ script: string } | { error: string }> {
+    const loaderUrl = `https://fpnpmcdn.net/v3/${apiKey}/loader_v3.11.10.js`;
+    try {
+      const response = await fetch(loaderUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch script: ${response.statusText}`);
+      }
+      const script = await response.text();
+      return { script };
+    } catch (error: any) {
+      console.error('Failed to fetch FingerprintJS script:', error);
+      return { error: error.message };
+    }
+  }
+
+  async handleFingerprinting(apiKey: string, tabId: number) {
+    try {
+      // Inject the bundled fingerprinting script into the active tab's main world
+      await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: ['fingerprint-agent.js'],
+        world: 'MAIN'
+      });
+
+      // Now execute the code to run FingerprintJS in the main world
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        func: runFingerprintJS,
+        args: [apiKey],
+        world: 'MAIN'
+      });
+
+      if (results && results[0] && results[0].result) {
+        return results[0].result;
+      } else {
+        throw new Error('No result returned from fingerprinting script');
+      }
+    } catch (error: any) {
+      console.error('Background fingerprinting error:', error);
+      return {
+        success: false,
+        error: `Failed to run fingerprinting: ${error.message}`
+      };
+    }
+  }
+}
+
+// This function gets injected into the webpage after the agent is injected
+function runFingerprintJS(apiKey: string) {
+  return new Promise((resolve) => {
+    // The FingerprintJS object is now available on the window
+    // thanks to the injected fingerprint-agent.js script.
+    async function initializeFingerprint() {
+      try {
+        const fp = await (window as any).FingerprintJS.load({
+          apiKey: apiKey,
+          region: 'ap'
+        });
+        const result = await fp.get({
+          extendedResult: true
+        });
+        resolve({
+          success: true,
+          data: {
+            visitorId: result.visitorId,
+            confidence: result.confidence,
+            components: result.components,
+            requestId: result.requestId,
+            timestamp: Date.now()
+          }
+        });
+      } catch (error: any) {
+        resolve({
+          success: false,
+          error: `Fingerprinting failed: ${error.message}`
+        });
+      }
+    }
+
+    // Wait for the FingerprintJS object to be available
+    let checks = 0;
+    const interval = setInterval(() => {
+      checks++;
+      if ((window as any).FingerprintJS) {
+        clearInterval(interval);
+        initializeFingerprint();
+      } else if (checks > 50) { // Timeout after 5 seconds
+        clearInterval(interval);
+        resolve({ success: false, error: 'FingerprintJS object not found after script injection.' });
+      }
+    }, 100);
+  });
 }
 
 const backgroundService = new BackgroundService();

@@ -42,7 +42,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["injected.js"],
+      "resources": ["injected.js", "fingerprint-agent.js"],
       "matches": ["<all_urls>"]
     }
   ],
@@ -56,6 +56,6 @@
     ]
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://*.fingerprint.com"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' https://api.fpjs.io https://*.api.fpjs.io"
   }
 }

@@ -5,7 +5,6 @@ import TrackerList from '../components/TrackerList';
 import PrivacyAnalysis from '../components/PrivacyAnalysis';
 import DataFlowVisualization from '../components/DataFlowVisualization';
 import ActionButtons from '../components/ActionButtons';
-import FingerprintJS from '@fingerprintjs/fingerprintjs-pro';
 
 const FINGERPRINT_API_KEY = 'N7imdc4hXvZILIkFSLAj';
 
@@ -64,7 +63,8 @@ const App: React.FC = () => {
         enabled
       });
       
-      await chrome.storage.sync.set({ blockingEnabled: enabled });      setBlockingEnabled(enabled);
+      await chrome.storage.sync.set({ blockingEnabled: enabled });
+      setBlockingEnabled(enabled);
     } catch (error) {
       console.error('Failed to toggle blocking:', error);
     }
@@ -99,7 +99,9 @@ const App: React.FC = () => {
         serviceWorkers: true,
         cacheStorage: true,
         fileSystems: true
-      });      // Revoke permissions for this origin (only the ones that can be revoked)
+      });
+
+      // Revoke permissions for this origin (only the ones that can be revoked)
       try {
         await chrome.permissions.remove({
           origins: [origin]
@@ -208,9 +210,22 @@ const App: React.FC = () => {
     setFpLoading(true);
     setFpError(null);
     try {
-      const fp = await FingerprintJS.load({ apiKey: FINGERPRINT_API_KEY, region: 'ap' });
-      const result = await fp.get({ extendedResult: true });
-      setFpData(result);
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id) {
+        throw new Error("Could not find active tab.");
+      }
+
+      const response = await chrome.runtime.sendMessage({
+        action: 'runFingerprint',
+        apiKey: FINGERPRINT_API_KEY,
+        tabId: tab.id,
+      });
+
+      if (response.success) {
+        setFpData(response.data);
+      } else {
+        throw new Error(response.error || 'Unknown fingerprinting error');
+      }
     } catch (e: any) {
       setFpError(e.message || String(e));
       setFpData(null);
@@ -223,7 +238,7 @@ const App: React.FC = () => {
       <div className="app">
         {/* FingerprintJS Pro Section */}
         <div style={{ background: '#fef3c7', border: '1px solid #f59e42', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: 16 }}>🔍 FingerprintJS Pro Info</h3>
+          <h3 style={{ margin: 0, fontSize: 16, marginBottom: 8 }}>🔍 FingerprintJS Pro Info</h3>
           <button onClick={loadFingerprint} style={{ margin: '8px 0' }}>Reload Fingerprint Data</button>
           <div>VisitorId: {fpLoading ? 'Loading...' : fpData?.visitorId || 'N/A'}</div>
           <div>Uniqueness: {fpData?.confidence?.score ? `${(fpData.confidence.score * 100).toFixed(1)}%` : 'N/A'}</div>
@@ -232,6 +247,7 @@ const App: React.FC = () => {
             {fpError ? fpError : JSON.stringify(fpData, null, 2)}
           </pre>
         </div>
+        
         <div className="loading">
           <div className="loading-logo">
             <img src="logo.png" alt="Kavach Logo" className="logo-image" />
@@ -247,7 +263,7 @@ const App: React.FC = () => {
     <div className="app">
       {/* FingerprintJS Pro Section */}
       <div style={{ background: '#fef3c7', border: '1px solid #f59e42', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-        <h3 style={{ margin: 0, fontSize: 16 }}>🔍 FingerprintJS Pro Info</h3>
+        <h3 style={{ margin: 0, fontSize: 16, marginBottom: 8 }}>🔍 FingerprintJS Pro Info</h3>
         <button onClick={loadFingerprint} style={{ margin: '8px 0' }}>Reload Fingerprint Data</button>
         <div>VisitorId: {fpLoading ? 'Loading...' : fpData?.visitorId || 'N/A'}</div>
         <div>Uniqueness: {fpData?.confidence?.score ? `${(fpData.confidence.score * 100).toFixed(1)}%` : 'N/A'}</div>
@@ -256,6 +272,7 @@ const App: React.FC = () => {
           {fpError ? fpError : JSON.stringify(fpData, null, 2)}
         </pre>
       </div>
+
       <header className="header">
         <div className="logo">
           <img src="logo.png" alt="Kavach Logo" className="logo-image" />
@@ -274,7 +291,8 @@ const App: React.FC = () => {
               url={currentUrl}
             />
             
-            <div className="section">              <div className="section-header">
+            <div className="section">
+              <div className="section-header">
                 <div className="section-title">
                   Tracker Blocking
                 </div>
@@ -288,11 +306,16 @@ const App: React.FC = () => {
 
             {siteData.privacyAnalysis && (
               <PrivacyAnalysis analysis={siteData.privacyAnalysis} />
-            )}            <div className="section">
+            )}
+
+            <div className="section">
               <div className="section-title" style={{ marginBottom: '20px' }}>
                 Data Flow
               </div>
-              <DataFlowVisualization dataFlow={siteData.dataFlow} />            </div>            <ActionButtons 
+              <DataFlowVisualization dataFlow={siteData.dataFlow} />
+            </div>
+
+            <ActionButtons 
               onOptOut={handleOptOut}
               onAnalyzePolicy={handleAnalyzePolicy}
               hasPrivacyAnalysis={!!siteData.privacyAnalysis}
@@ -318,7 +341,8 @@ const App: React.FC = () => {
               )}
             </div>
           </>
-        ) : (          <div className="empty-state">
+        ) : (
+          <div className="empty-state">
             <div className="empty-state-logo">
               <img src="logo.png" alt="Kavach Logo" className="logo-image" />
             </div>

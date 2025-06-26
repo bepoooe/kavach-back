@@ -29,9 +29,8 @@ git push origin main
    - **Environment**: `Node`
    - **Region**: Choose closest to your users
    - **Branch**: `main`
-   - **Build Command**: `npm ci && npm run build`
+   - **Build Command**: `npm install --production=false && npm run build`
    - **Start Command**: `npm start`
-   - **Alternative Build Command (if timeout)**: `npm install --production && npm run build`
 
 ### 3. Environment Variables
 

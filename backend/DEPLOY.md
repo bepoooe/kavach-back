@@ -38,7 +38,7 @@ In the Render dashboard, add these environment variables:
 
 | Key | Value | Description |
 |-----|-------|-------------|
-| `GEMINI_API_KEY` | `your_actual_api_key` | Your Google Gemini API key |
+| `GEMINI_API_KEY` | `AIzaSyAOnPkSGxDTW79dZYZM98eOIQEbyNGs894` | Your Google Gemini API key |
 | `NODE_ENV` | `production` | Production environment |
 | `ALLOWED_ORIGINS` | `chrome-extension://,moz-extension://` | CORS origins |
 | `RATE_LIMIT_WINDOW_MS` | `900000` | Rate limit window (15 min) |

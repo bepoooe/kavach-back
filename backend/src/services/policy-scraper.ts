@@ -1,6 +1,5 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import puppeteer from 'puppeteer';
 
 export interface ScrapedContent {
   text: string;
@@ -135,8 +134,8 @@ export class PolicyScraper {
           lastModified: response.headers['last-modified']
         };
       } catch (simpleError) {
-        console.log('Simple scraping failed, trying headless browser...');
-        return await this.scrapeWithPuppeteer(url);
+        console.log('Simple scraping failed, trying enhanced axios...');
+        return await this.scrapeWithEnhancedAxios(url);
       }
     } catch (error) {
       console.error('Error scraping privacy policy:', error);
@@ -144,65 +143,56 @@ export class PolicyScraper {
     }
   }
 
-  private static async scrapeWithPuppeteer(url: string): Promise<ScrapedContent> {
-    let browser;
+  private static async scrapeWithEnhancedAxios(url: string): Promise<ScrapedContent> {
     try {
-      browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-      });
-
-      const page = await browser.newPage();
-      
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-      
-      // Set a reasonable timeout
-      await page.goto(url, { 
-        waitUntil: 'networkidle2', 
-        timeout: 30000 
-      });
-
-      // Wait for content to load
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Extract content
-      const content = await page.evaluate(() => {
-        // Remove unwanted elements
-        const elementsToRemove = document.querySelectorAll('script, style, nav, header, footer, .navigation, .menu, .sidebar');
-        elementsToRemove.forEach(el => el.remove());
-
-        // Try to find main content
-        const contentSelectors = [
-          'main', '.main-content', '.content', '.policy-content',
-          '.privacy-policy', '.privacy-content', 'article', '.article'
-        ];
-
-        for (const selector of contentSelectors) {
-          const element = document.querySelector(selector);
-          if (element && element.textContent && element.textContent.trim().length > 500) {
-            return {
-              text: element.textContent,
-              title: document.title || document.querySelector('h1')?.textContent || 'Privacy Policy'
-            };
-          }
+      const response = await axios.get(url, {
+        timeout: 15000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1'
         }
-
-        // Fallback to body
-        return {
-          text: document.body.textContent || '',
-          title: document.title || 'Privacy Policy'
-        };
       });
+
+      const $ = cheerio.load(response.data);
+      
+      // Remove script, style, and navigation elements
+      $('script, style, nav, header, footer, .navigation, .menu, .sidebar').remove();
+      
+      // Try to find main content area
+      let content = '';
+      const contentSelectors = [
+        'main', '.main-content', '.content', '.policy-content',
+        '.privacy-policy', '.privacy-content', 'article', '.article'
+      ];
+
+      for (const selector of contentSelectors) {
+        const element = $(selector);
+        if (element.length > 0 && element.text().trim().length > 500) {
+          content = element.text();
+          break;
+        }
+      }
+
+      // Fallback to body content
+      if (!content || content.length < 500) {
+        content = $('body').text();
+      }
+
+      const title = $('title').text() || $('h1').first().text() || 'Privacy Policy';
 
       return {
-        text: this.cleanText(content.text),
+        text: this.cleanText(content),
         url,
-        title: content.title.trim()
+        title: title.trim(),
+        lastModified: response.headers['last-modified']
       };
-    } finally {
-      if (browser) {
-        await browser.close();
-      }
+    } catch (error) {
+      console.error('Enhanced axios scraping failed:', error);
+      throw new Error(`Failed to scrape privacy policy from ${url}`);
     }
   }
 

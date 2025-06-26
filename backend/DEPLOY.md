@@ -29,8 +29,9 @@ git push origin main
    - **Environment**: `Node`
    - **Region**: Choose closest to your users
    - **Branch**: `main`
-   - **Build Command**: `npm install && npm run build`
+   - **Build Command**: `npm ci && npm run build`
    - **Start Command**: `npm start`
+   - **Alternative Build Command (if timeout)**: `npm install --production && npm run build`
 
 ### 3. Environment Variables
 
@@ -105,10 +106,11 @@ npm run build
 
 ### Common Deployment Issues:
 
-**Build Failed**
-- Check build logs in Render dashboard
-- Ensure `package.json` has correct scripts
-- Verify TypeScript compiles locally: `npm run build`
+**Build Failed - Hanging on npm install**
+- This usually happens with heavy dependencies like Puppeteer
+- The updated package.json removes puppeteer in favor of puppeteer-core
+- Make sure you've committed the latest package.json changes
+- If still hanging, try using a smaller build command: `npm ci --production && npm run build`
 
 **Environment Variables**
 - Double-check `GEMINI_API_KEY` is set correctly

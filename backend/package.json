@@ -7,6 +7,7 @@
     "dev": "nodemon src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "postinstall": "echo 'Installation complete'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -16,8 +17,9 @@
     "express-rate-limit": "^7.1.5",
     "dotenv": "^16.3.1",
     "@google/generative-ai": "^0.2.1",
-    "puppeteer": "^21.6.1",
-    "cheerio": "^1.0.0-rc.12"
+    "axios": "^1.6.2",
+    "cheerio": "^1.0.0-rc.12",
+    "puppeteer-core": "^21.6.1"
   },
   "devDependencies": {
     "@types/node": "^20.10.5",
@@ -27,6 +29,9 @@
     "typescript": "^5.3.3",
     "nodemon": "^3.0.2",
     "ts-node": "^10.9.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "keywords": [
     "privacy",

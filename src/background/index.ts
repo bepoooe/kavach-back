@@ -310,9 +310,230 @@ class BackgroundService {
       console.warn('❌ Cannot analyze privacy policy for invalid URL:', siteUrl);
       return { error: 'Invalid URL provided' };
     }
+
+    console.log('🤖 Starting real-time privacy policy analysis for:', siteUrl);
+
+    try {
+      // First, try enhanced analysis with Apify + Gemini
+      const enhancedAnalysis = await this.callBackendAPI('/api/privacy-policy/analyze-enhanced', {
+        url: siteUrl
+      });
+
+      if (enhancedAnalysis.success) {
+        console.log('✅ Enhanced analysis completed successfully');
+        return this.formatAnalysisResponse(enhancedAnalysis.data, 'enhanced');
+      }
+
+      // Fallback to standard analysis if enhanced fails
+      console.log('⚠️ Enhanced analysis failed, trying standard analysis...');
+      const standardAnalysis = await this.callBackendAPI('/api/privacy-policy/analyze', {
+        url: siteUrl,
+        enhanced: false
+      });
+
+      if (standardAnalysis.success) {
+        console.log('✅ Standard analysis completed successfully');
+        return this.formatAnalysisResponse(standardAnalysis.data, 'standard');
+      }
+
+      // If backend is unavailable, use fallback analysis
+      console.log('⚠️ Backend unavailable, using fallback analysis...');
+      return await this.fallbackPrivacyAnalysis(siteUrl);
+
+    } catch (error) {
+      console.error('❌ Privacy policy analysis failed:', error);
+      return await this.fallbackPrivacyAnalysis(siteUrl);
+    }
+  }
+
+  private async callBackendAPI(endpoint: string, data: any): Promise<any> {
+    const BACKEND_URL = 'http://localhost:3000';
     
+    try {
+      const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Backend API call failed for ${endpoint}:`, error);
+      throw error;
+    }
+  }
+
+  private formatAnalysisResponse(backendData: any, analysisType: string): any {
+    // Convert backend response to extension format
+    const score = this.calculateScoreFromSafety(backendData.safety, backendData.scores);
+    
+    return {
+      score,
+      risks: this.extractRisks(backendData),
+      summary: backendData.summary || 'Privacy policy analysis completed',
+      dataSharing: this.extractDataSharing(backendData),
+      recommendations: this.generateRecommendations(backendData),
+      complianceStatus: this.assessCompliance(backendData),
+      analysisType,
+      keyFindings: backendData.keyFindings || [],
+      scores: backendData.scores || {},
+      metadata: backendData.policyMetadata || {}
+    };
+  }
+
+  private calculateScoreFromSafety(safety: string, scores?: any): number {
+    // Base score from safety rating
+    let baseScore = 50;
+    switch (safety) {
+      case 'SAFE': baseScore = 85; break;
+      case 'RISKY': baseScore = 50; break;
+      case 'UNSAFE': baseScore = 20; break;
+    }
+
+    // Adjust with detailed scores if available
+    if (scores) {
+      const avgScore = (
+        (scores.dataCollection || 50) +
+        (scores.thirdParty || 50) +
+        (scores.userRights || 50) +
+        (scores.transparency || 50)
+      ) / 4;
+      
+      // Weighted average: 60% detailed scores, 40% safety rating
+      return Math.round((avgScore * 0.6) + (baseScore * 0.4));
+    }
+
+    return baseScore;
+  }
+
+  private extractRisks(data: any): string[] {
+    const risks: string[] = [];
+    
+    if (data.safety === 'UNSAFE') {
+      risks.push('High privacy risk detected');
+    } else if (data.safety === 'RISKY') {
+      risks.push('Moderate privacy concerns identified');
+    }
+
+    if (data.scores) {
+      if (data.scores.dataCollection < 50) {
+        risks.push('Extensive data collection practices');
+      }
+      if (data.scores.thirdParty < 50) {
+        risks.push('Significant third-party data sharing');
+      }
+      if (data.scores.userRights < 50) {
+        risks.push('Limited user control and rights');
+      }
+      if (data.scores.transparency < 50) {
+        risks.push('Unclear or vague privacy policy');
+      }
+    }
+
+    if (data.keyFindings) {
+      data.keyFindings.forEach((finding: string) => {
+        if (finding.toLowerCase().includes('concern') || 
+            finding.toLowerCase().includes('risk') ||
+            finding.toLowerCase().includes('issue')) {
+          risks.push(finding);
+        }
+      });
+    }
+
+    return risks.length > 0 ? risks : ['Analysis completed without major concerns'];
+  }
+
+  private extractDataSharing(data: any): string[] {
+    const dataSharing: string[] = [];
+    
+    if (data.keyFindings) {
+      data.keyFindings.forEach((finding: string) => {
+        if (finding.toLowerCase().includes('google') ||
+            finding.toLowerCase().includes('facebook') ||
+            finding.toLowerCase().includes('analytics') ||
+            finding.toLowerCase().includes('advertising') ||
+            finding.toLowerCase().includes('third party') ||
+            finding.toLowerCase().includes('partners')) {
+          dataSharing.push(finding);
+        }
+      });
+    }
+
+    // Default common trackers if none found
+    if (dataSharing.length === 0) {
+      dataSharing.push('Analytics services', 'Advertising networks');
+    }
+
+    return dataSharing;
+  }
+
+  private generateRecommendations(data: any): string[] {
+    const recommendations: string[] = [];
+    
+    if (data.scores) {
+      if (data.scores.userRights < 70) {
+        recommendations.push('Review your privacy settings');
+        recommendations.push('Consider opting out of data sharing');
+      }
+      if (data.scores.transparency < 70) {
+        recommendations.push('Read the full privacy policy carefully');
+      }
+      if (data.scores.thirdParty < 60) {
+        recommendations.push('Use privacy-focused browser settings');
+        recommendations.push('Consider using tracking protection');
+      }
+    }
+
+    if (data.safety === 'UNSAFE') {
+      recommendations.push('Avoid sharing sensitive information');
+      recommendations.push('Use alternative services if possible');
+    }
+
+    return recommendations.length > 0 ? recommendations : ['Enable privacy protection features'];
+  }
+
+  private assessCompliance(data: any): any {
+    // Basic compliance assessment based on analysis
+    const compliance = {
+      gdpr: 'unclear',
+      ccpa: 'unclear',
+      coppa: 'unclear'
+    };
+
+    if (data.keyFindings) {
+      const findings = data.keyFindings.join(' ').toLowerCase();
+      
+      if (findings.includes('gdpr') || findings.includes('data protection')) {
+        compliance.gdpr = data.scores?.userRights > 70 ? 'compliant' : 'partial';
+      }
+      
+      if (findings.includes('ccpa') || findings.includes('california')) {
+        compliance.ccpa = data.scores?.userRights > 70 ? 'compliant' : 'partial';
+      }
+      
+      if (findings.includes('children') || findings.includes('coppa')) {
+        compliance.coppa = data.scores?.dataCollection > 80 ? 'compliant' : 'non-compliant';
+      }
+    }
+
+    return compliance;
+  }
+
+  private async fallbackPrivacyAnalysis(siteUrl: string): Promise<any> {
+    const domain = this.getDomainFromURL(siteUrl);
+    if (!domain) {
+      return { error: 'Invalid URL provided' };
+    }
+
     const policyUrls = this.privacyPolicyUrls.get(domain) || [];
-      // If no privacy policy URLs found, try to find them with enhanced detection
+    
+    // If no privacy policy URLs found, try to find them with enhanced detection
     if (policyUrls.length === 0) {
       // Expanded list of common privacy policy paths
       const commonPaths = [
@@ -376,14 +597,17 @@ class BackgroundService {
         score: 50,
         risks: ['No privacy policy found'],
         summary: 'Unable to locate a privacy policy for this website.',
-        dataSharing: []
+        dataSharing: [],
+        recommendations: ['Look for privacy information in website footer'],
+        complianceStatus: { gdpr: 'unclear', ccpa: 'unclear', coppa: 'unclear' },
+        analysisType: 'fallback'
       };
     }
 
-    // Fetch and analyze the privacy policy
+    // Fetch and analyze the privacy policy with basic analysis
     try {
       const policyText = await this.fetchPrivacyPolicyText(policyUrls[0]);
-      const analysis = await this.performPrivacyAnalysis(policyText, domain);
+      const analysis = await this.performBasicPrivacyAnalysis(policyText, domain);
       
       // Store the analysis in site data
       const siteData = this.siteData.get(domain);
@@ -394,15 +618,68 @@ class BackgroundService {
       
       return analysis;
     } catch (error) {
-      console.error('Privacy policy analysis failed:', error);
+      console.error('Fallback privacy policy analysis failed:', error);
       return {
         score: 30,
         risks: ['Failed to analyze privacy policy'],
-        summary: 'Privacy policy analysis failed due to technical issues.',
-        dataSharing: []
+        summary: 'Privacy policy analysis encountered an error.',
+        dataSharing: [],
+        recommendations: ['Manual review recommended'],
+        complianceStatus: { gdpr: 'unclear', ccpa: 'unclear', coppa: 'unclear' },
+        analysisType: 'fallback'
       };
     }
-  }  private async fetchPrivacyPolicyText(policyUrl: string): Promise<string> {
+  }
+
+  private async performBasicPrivacyAnalysis(policyText: string, domain: string): Promise<any> {
+    // Basic analysis without AI - simplified version
+    const textLower = policyText.toLowerCase();
+    
+    let score = 70; // Start with neutral score
+    const risks: string[] = [];
+    const dataSharing: string[] = [];
+    
+    // Check for common privacy concerns
+    if (textLower.includes('third party') || textLower.includes('partners')) {
+      score -= 10;
+      risks.push('Data may be shared with third parties');
+      dataSharing.push('Third-party partners');
+    }
+    
+    if (textLower.includes('cookies') || textLower.includes('tracking')) {
+      dataSharing.push('Tracking cookies');
+    }
+    
+    if (textLower.includes('advertising') || textLower.includes('marketing')) {
+      score -= 5;
+      dataSharing.push('Advertising partners');
+    }
+    
+    if (textLower.includes('google analytics') || textLower.includes('analytics')) {
+      dataSharing.push('Google Analytics');
+    }
+    
+    // Check for positive indicators
+    if (textLower.includes('gdpr') || textLower.includes('data protection')) {
+      score += 10;
+    }
+    
+    if (textLower.includes('opt out') || textLower.includes('opt-out')) {
+      score += 5;
+    }
+    
+    return {
+      score: Math.max(20, Math.min(100, score)),
+      risks: risks.length > 0 ? risks : ['Standard data collection practices'],
+      summary: 'Basic privacy policy analysis completed',
+      dataSharing: dataSharing.length > 0 ? dataSharing : ['Standard website analytics'],
+      recommendations: score < 50 ? ['Review privacy settings', 'Consider opt-out options'] : ['Standard privacy recommendations'],
+      complianceStatus: { gdpr: 'unclear', ccpa: 'unclear', coppa: 'unclear' },
+      analysisType: 'basic'
+    };
+  }
+
+  private async fetchPrivacyPolicyText(policyUrl: string): Promise<string> {
     try {
       const response = await fetch(policyUrl);
       const html = await response.text();

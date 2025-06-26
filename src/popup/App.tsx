@@ -1226,16 +1226,74 @@ const App: React.FC = () => {
     if (!siteData || analyzingPolicy) return;
 
     setAnalyzingPolicy(true);
+    
+    // Show loading state with real-time updates
+    setSiteData({
+      ...siteData,
+      privacyAnalysis: {
+        score: 0,
+        risks: [],
+        summary: '🔍 Searching for privacy policy...',
+        dataSharing: [],
+        loading: true,
+        analysisType: 'loading'
+      }
+    });
+
     try {
+      // Update status: Finding privacy policy
+      setTimeout(() => {
+        if (analyzingPolicy) {
+          setSiteData(prev => prev && {
+            ...prev,
+            privacyAnalysis: {
+              ...prev.privacyAnalysis!,
+              summary: '📄 Found privacy policy, starting enhanced analysis...'
+            }
+          });
+        }
+      }, 1000);
+
+      // Update status: Apify scraping
+      setTimeout(() => {
+        if (analyzingPolicy) {
+          setSiteData(prev => prev && {
+            ...prev,
+            privacyAnalysis: {
+              ...prev.privacyAnalysis!,
+              summary: '🕷️ Apify is crawling privacy pages...'
+            }
+          });
+        }
+      }, 3000);
+
+      // Update status: AI analysis
+      setTimeout(() => {
+        if (analyzingPolicy) {
+          setSiteData(prev => prev && {
+            ...prev,
+            privacyAnalysis: {
+              ...prev.privacyAnalysis!,
+              summary: '🤖 AI analyzing privacy content with Gemini...'
+            }
+          });
+        }
+      }, 6000);
+
       const response = await chrome.runtime.sendMessage({
         action: 'analyzePrivacyPolicy',
         url: currentUrl
       });
 
+      // Final result
       setSiteData({
         ...siteData,
-        privacyAnalysis: response
+        privacyAnalysis: {
+          ...response,
+          loading: false
+        }
       });
+
     } catch (error) {
       console.error('Failed to analyze privacy policy:', error);
       // Show user-friendly error
@@ -1243,9 +1301,12 @@ const App: React.FC = () => {
         ...siteData,
         privacyAnalysis: {
           score: 0,
-          risks: ['Analysis failed due to technical error'],
-          summary: 'Unable to analyze privacy policy at this time. Please try again later.',
-          dataSharing: []
+          risks: ['Analysis failed - Backend server may be offline'],
+          summary: 'Unable to analyze privacy policy. Make sure the Kavach backend server is running on localhost:3000.',
+          dataSharing: [],
+          analysisType: 'error',
+          loading: false,
+          recommendations: ['Check if backend server is running', 'Try again in a few moments']
         }
       });
     } finally {

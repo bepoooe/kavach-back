@@ -6,8 +6,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { privacyPolicyRouter } from './routes/privacy-policy.js';
-import { errorHandler } from './middleware/error-handler.js';
+import { privacyPolicyRouter } from './routes/privacy-policy';
+import { errorHandler } from './middleware/error-handler';
 
 const app = express();
 const PORT = process.env.PORT || 3000;

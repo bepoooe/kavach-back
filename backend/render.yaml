@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: kavach-backend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: APIFY_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: "https://www.google.com,https://www.facebook.com,https://www.amazon.com,chrome-extension://*"
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "900000"
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: "1000"
+    healthCheckPath: /health

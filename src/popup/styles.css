@@ -80,6 +80,26 @@ body {
   }
 }
 
+/* Loading spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Pulse animation for loading states */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
 .logo {
   display: flex;
   align-items: center;
@@ -956,12 +976,6 @@ body {
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .btn::before {
   content: '';
   position: absolute;
@@ -1365,4 +1379,14 @@ div + .tracker-list {
 /* Ensure proper spacing between section title and data flow */
 .section-title + .data-flow {
   margin-top: 18px;
+}
+
+/* Enhanced analysis badges */
+.analysis-badge {
+  transition: all 0.3s ease;
+}
+
+.analysis-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }

@@ -3,19 +3,17 @@ services:
     name: kavach-backend
     env: node
     plan: free
-    buildCommand: cd backend && npm ci && npm run build
-    startCommand: cd backend && npm start
+    buildCommand: chmod +x build.sh && ./build.sh
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 10000
       - key: GEMINI_API_KEY
         sync: false
-      - key: APIFY_API_KEY
+      - key: APIFY_API_KEY  
         sync: false
       - key: ALLOWED_ORIGINS
-        value: "https://www.google.com,https://www.facebook.com,https://www.amazon.com,chrome-extension://*"
+        value: "chrome-extension://*,https://www.google.com,https://www.facebook.com,https://www.amazon.com"
       - key: RATE_LIMIT_WINDOW_MS
         value: "900000"
       - key: RATE_LIMIT_MAX_REQUESTS

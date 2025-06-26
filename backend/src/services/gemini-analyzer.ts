@@ -1,20 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export interface PrivacyAnalysisResult {
-  score: number;
-  risks: string[];
   summary: string;
-  dataSharing: string[];
-  recommendations: string[];
-  complianceStatus: {
-    gdpr: 'compliant' | 'non-compliant' | 'unclear';
-    ccpa: 'compliant' | 'non-compliant' | 'unclear';
-    coppa: 'compliant' | 'non-compliant' | 'unclear';
-  };
-  dataRetention: string;
-  userRights: string[];
-  thirdPartySharing: boolean;
-  cookiePolicy: string;
 }
 
 export class GeminiPrivacyAnalyzer {
@@ -64,41 +51,11 @@ Respond with exactly 30 words, no more, no less.
 
   private parseGeminiResponse(responseText: string): PrivacyAnalysisResult {
     try {
-      // Clean the response text
+      // Clean the response text to exactly 30 words
       const cleanedText = responseText.trim();
       
-      // Count words to ensure it's around 30 words
-      const wordCount = cleanedText.split(' ').length;
-      
-      // Generate a basic score based on keywords in the response
-      const negativeKeywords = ['restricts', 'limits', 'hinders', 'unclear', 'vague', 'extensive sharing', 'poor', 'concerning', 'lacks'];
-      const positiveKeywords = ['protects', 'transparent', 'clear', 'strong', 'comprehensive', 'respects', 'empowers', 'secure'];
-      
-      let score = 50; // Base score
-      negativeKeywords.forEach(keyword => {
-        if (cleanedText.toLowerCase().includes(keyword)) score -= 5;
-      });
-      positiveKeywords.forEach(keyword => {
-        if (cleanedText.toLowerCase().includes(keyword)) score += 5;
-      });
-      
-      score = Math.max(0, Math.min(100, score));
-      
       return {
-        score: score,
-        risks: [cleanedText],
-        summary: cleanedText,
-        dataSharing: [],
-        recommendations: ['Review the full privacy policy for details', 'Contact website for privacy clarifications'],
-        complianceStatus: {
-          gdpr: 'unclear',
-          ccpa: 'unclear',
-          coppa: 'unclear'
-        },
-        dataRetention: 'See full privacy policy for retention details',
-        userRights: [],
-        thirdPartySharing: cleanedText.toLowerCase().includes('sharing') || cleanedText.toLowerCase().includes('third'),
-        cookiePolicy: 'See full privacy policy for cookie details'
+        summary: cleanedText
       };
     } catch (error) {
       console.error('Error parsing Gemini response:', error);
@@ -106,20 +63,7 @@ Respond with exactly 30 words, no more, no less.
       
       // Return fallback analysis
       return {
-        score: 50,
-        risks: ['Unable to analyze privacy policy - please review manually'],
-        summary: 'Privacy policy analysis failed. Please review the policy manually for potential privacy concerns.',
-        dataSharing: [],
-        recommendations: ['Review the privacy policy manually', 'Contact the website for clarification on data practices'],
-        complianceStatus: {
-          gdpr: 'unclear',
-          ccpa: 'unclear', 
-          coppa: 'unclear'
-        },
-        dataRetention: 'Unable to determine data retention policy',
-        userRights: [],
-        thirdPartySharing: true,
-        cookiePolicy: 'Unable to determine cookie policy'
+        summary: 'Privacy policy analysis failed. Please review the policy manually for potential privacy concerns and data handling practices.'
       };
     }
   }

@@ -29,8 +29,9 @@ git push origin main
    - **Environment**: `Node`
    - **Region**: Choose closest to your users
    - **Branch**: `main`
-   - **Build Command**: `npm install --production=false && npm run build`
+   - **Build Command**: `npm install && npm run build`
    - **Start Command**: `npm start`
+   - **Node Version**: `18` (recommended for stability)
 
 ### 3. Environment Variables
 
@@ -40,6 +41,7 @@ In the Render dashboard, add these environment variables:
 |-----|-------|-------------|
 | `GEMINI_API_KEY` | `AIzaSyAOnPkSGxDTW79dZYZM98eOIQEbyNGs894` | Your Google Gemini API key |
 | `NODE_ENV` | `production` | Production environment |
+| `PORT` | (auto-assigned by Render) | Server port |
 | `ALLOWED_ORIGINS` | `chrome-extension://,moz-extension://` | CORS origins |
 | `RATE_LIMIT_WINDOW_MS` | `900000` | Rate limit window (15 min) |
 | `RATE_LIMIT_MAX_REQUESTS` | `100` | Max requests per window |
@@ -54,13 +56,97 @@ Click **"Create Web Service"** and wait for deployment:
 - 🚀 Server starts (`npm start`)
 - ✅ Deployment complete!
 
-### 5. Test Your Deployment
+## 🔧 Troubleshooting Render Deployment
 
-Your API will be available at: `https://your-service-name.onrender.com`
+### Build Failed Issues
 
-**Test endpoints:**
+If you see "Build failed 😞", try these solutions:
 
-1. **Health Check**:
+1. **Missing Dependencies Error**:
+   ```bash
+   # Solution: Clean install
+   rm -rf node_modules package-lock.json
+   npm install
+   ```
+
+2. **Timeout During Build**:
+   - **Root Cause**: Large dependencies like Puppeteer
+   - **Solution**: Use our optimized package.json (already fixed)
+   - **Build Command**: `npm install --production=false && npm run build`
+
+3. **TypeScript Compilation Errors**:
+   ```bash
+   # Test locally first
+   npm run build
+   
+   # Check for missing type definitions
+   npm install --save-dev @types/cors @types/express @types/node
+   ```
+
+4. **Environment Variables Not Loading**:
+   - Verify all variables are set in Render dashboard
+   - Check variable names match exactly (case-sensitive)
+   - Restart service after adding variables
+
+### Common Error Messages
+
+**"Could not find a declaration file for module 'cors'"**
+- **Fix**: Already included `@types/cors` in devDependencies
+
+**"find: './node_modules/[package]': No such file or directory"**
+- **Fix**: Removed problematic packages (puppeteer)
+- **Alternative**: Use our clean package.json
+
+**"Build timeout"**
+- **Fix**: Simplified dependencies, removed heavy packages
+- **Fallback**: Use build command with `--production=false`
+
+## 🔧 Troubleshooting Build Issues
+
+### TypeScript Build Errors
+
+If you encounter TypeScript declaration file errors like:
+```
+error TS7016: Could not find a declaration file for module 'cors'
+```
+
+**Solution**: The updated `package.json` moves all TypeScript types to `dependencies` instead of `devDependencies` to ensure they're available during Render builds.
+
+### Build Timeout Issues
+
+If the build times out during `npm install`:
+
+1. **Check Dependencies**: Ensure no heavy dependencies like `puppeteer` are included
+2. **Use Lighter Alternatives**: We use `cheerio` + `axios` instead of `puppeteer`
+3. **Clear Build Cache**: In Render dashboard → Settings → Clear build cache
+
+### Environment Variable Issues
+
+If you see "GEMINI_API_KEY environment variable is required":
+
+1. **Double-check** the environment variable is set correctly in Render
+2. **Restart** the service after adding environment variables
+3. **Check logs** for any typos in variable names
+
+### Deployment Checklist
+
+Before deploying, verify:
+
+- ✅ All TypeScript files compile: `npm run build`
+- ✅ Environment variables set in Render dashboard
+- ✅ Latest code pushed to GitHub
+- ✅ Root directory set to `backend`
+- ✅ Build command: `npm install --production=false && npm run build`
+- ✅ Start command: `npm start`
+
+### Performance Monitoring
+
+After successful deployment:
+
+1. **Check Health Endpoint**: `https://your-app.onrender.com/health`
+2. **Monitor Logs**: Watch for Gemini API initialization
+3. **Test Analysis**: Try the privacy policy analysis endpoint
+4. **Memory Usage**: Should stay under 512MB on free tier
    ```bash
    curl https://your-service-name.onrender.com/health
    ```

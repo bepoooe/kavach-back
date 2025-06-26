@@ -287,6 +287,12 @@ class BackgroundService {
             sendResponse({ success: false, error: 'No tabId provided in the request.' });
           }
           return true; // Keep channel open for async response
+
+        case 'performOptOut':
+          this.performComprehensiveOptOut(request.url, request.tabId)
+            .then(sendResponse)
+            .catch((error: any) => sendResponse({ success: false, error: error.message }));
+          return true;
       }
     });
   }
@@ -637,6 +643,157 @@ class BackgroundService {
         success: false,
         error: `Failed to run fingerprinting: ${error.message}`
       };
+    }
+  }
+
+  async performComprehensiveOptOut(url: string, tabId: number): Promise<{success: boolean, message?: string, error?: string}> {
+    try {
+      const domain = this.getDomainFromURL(url);
+      if (!domain) {
+        throw new Error('Invalid URL provided');
+      }
+
+      console.log('🚫 Starting comprehensive opt-out for:', domain);
+
+      // Step 1: Update tracking rules to block this domain
+      await this.addDomainToBlockList(domain);
+
+      // Step 2: Clear all request tracking for this domain
+      this.clearDomainTrackingData(domain);
+
+      // Step 3: Block all future third-party requests from this domain
+      await this.enableEnhancedBlockingForDomain(domain);
+
+      // Step 4: Clear any stored privacy policy data
+      this.privacyPolicyUrls.delete(domain);
+
+      // Step 5: Mark domain as opted out
+      await chrome.storage.local.set({
+        [`optedOut_${domain}`]: {
+          timestamp: Date.now(),
+          userInitiated: true,
+          comprehensive: true
+        }
+      });
+
+      // Step 6: Reset trust score to reflect opt-out status
+      const siteData = this.siteData.get(domain);
+      if (siteData) {
+        siteData.trustScore = 95; // High score due to opt-out
+        siteData.trackers = []; // Clear tracked requests
+        this.siteData.set(domain, siteData);
+      }
+
+      console.log('✅ Background opt-out processing completed for:', domain);
+      
+      return { 
+        success: true, 
+        message: `Comprehensive opt-out completed for ${domain}` 
+      };
+
+    } catch (error: any) {
+      console.error('❌ Background opt-out failed:', error);
+      return { 
+        success: false, 
+        error: `Opt-out failed: ${error.message}` 
+      };
+    }
+  }
+
+  private async addDomainToBlockList(domain: string): Promise<void> {
+    try {
+      // Get existing blocked domains
+      const storage = await chrome.storage.local.get(['blockedDomains']);
+      const blockedDomains = storage.blockedDomains || [];
+      
+      if (!blockedDomains.includes(domain)) {
+        blockedDomains.push(domain);
+        await chrome.storage.local.set({ blockedDomains });
+        console.log('📝 Added domain to block list:', domain);
+      }
+    } catch (error) {
+      console.warn('Failed to add domain to block list:', error);
+    }
+  }
+
+  private clearDomainTrackingData(domain: string): void {
+    try {
+      // Remove from site data
+      this.siteData.delete(domain);
+      
+      // Clear blocked requests count
+      const keysToDelete = Array.from(this.blockedRequests.keys())
+        .filter(key => key.includes(domain));
+      keysToDelete.forEach(key => this.blockedRequests.delete(key));
+      
+      console.log('🧹 Cleared tracking data for:', domain);
+    } catch (error) {
+      console.warn('Failed to clear domain tracking data:', error);
+    }
+  }
+
+  private async enableEnhancedBlockingForDomain(domain: string): Promise<void> {
+    try {
+      // Create dynamic rules to block requests from this domain
+      const newRules: chrome.declarativeNetRequest.Rule[] = [
+        {
+          id: Date.now(),
+          priority: 1,
+          action: { type: 'block' as chrome.declarativeNetRequest.RuleActionType },
+          condition: {
+            initiatorDomains: [domain],
+            resourceTypes: [
+              'script' as chrome.declarativeNetRequest.ResourceType,
+              'xmlhttprequest' as chrome.declarativeNetRequest.ResourceType,
+              'image' as chrome.declarativeNetRequest.ResourceType,
+              'media' as chrome.declarativeNetRequest.ResourceType,
+              'font' as chrome.declarativeNetRequest.ResourceType,
+              'websocket' as chrome.declarativeNetRequest.ResourceType
+            ]
+          }
+        }
+      ];
+
+      // YouTube-specific blocking rules
+      if (domain.includes('youtube.com') || domain.includes('google.com')) {
+        newRules.push(
+          {
+            id: Date.now() + 1,
+            priority: 2,
+            action: { type: 'block' as chrome.declarativeNetRequest.RuleActionType },
+            condition: {
+              urlFilter: '*youtube.com/api/stats*',
+              resourceTypes: ['xmlhttprequest' as chrome.declarativeNetRequest.ResourceType]
+            }
+          },
+          {
+            id: Date.now() + 2,
+            priority: 2,
+            action: { type: 'block' as chrome.declarativeNetRequest.RuleActionType },
+            condition: {
+              urlFilter: '*youtube.com/youtubei/v1/log_event*',
+              resourceTypes: ['xmlhttprequest' as chrome.declarativeNetRequest.ResourceType]
+            }
+          },
+          {
+            id: Date.now() + 3,
+            priority: 2,
+            action: { type: 'block' as chrome.declarativeNetRequest.RuleActionType },
+            condition: {
+              urlFilter: '*youtube.com/ptracking*',
+              resourceTypes: ['xmlhttprequest' as chrome.declarativeNetRequest.ResourceType, 'image' as chrome.declarativeNetRequest.ResourceType]
+            }
+          }
+        );
+      }
+
+      await chrome.declarativeNetRequest.updateDynamicRules({
+        addRules: newRules
+      });
+
+      console.log('🛡️ Enhanced blocking enabled for:', domain);
+    } catch (error) {
+      console.warn('Failed to enable enhanced blocking:', error);
     }
   }
 }

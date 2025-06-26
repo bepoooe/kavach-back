@@ -93,13 +93,14 @@ router.post('/analyze', async (req: Request, res: Response): Promise<void> => {
 
     console.log(`🤖 Analyzing privacy policy with AI (${scrapedContent.text.length} characters)`);
     
-    // Analyze with Gemini - returns just a 30-word summary
-    const summary = await analyzer.analyzePrivacyPolicy(scrapedContent.text, url);
+    // Analyze with Gemini
+    const analysis = await analyzer.analyzePrivacyPolicy(scrapedContent.text, url);
 
     const response: AnalyzeResponse = {
       success: true,
       data: {
-        summary: summary,
+        summary: analysis.summary,
+        safety: analysis.safety,
         policyMetadata: {
           url: finalPolicyUrl,
           title: scrapedContent.title,
@@ -111,7 +112,7 @@ router.post('/analyze', async (req: Request, res: Response): Promise<void> => {
       policyUrl: finalPolicyUrl
     };
 
-    console.log(`✅ Analysis complete for ${url}`);
+    console.log(`✅ Analysis complete for ${url} - Safety: ${analysis.safety}`);
     res.json(response);
 
   } catch (error) {

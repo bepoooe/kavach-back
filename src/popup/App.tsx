@@ -257,7 +257,7 @@ function comprehensiveOptOutCleanup(domain: string) {
     const handleYouTubeConsent = () => {
       console.log('🎥 Handling YouTube-specific consent...');
       
-      // Enhanced authentication cookie clearing to prevent re-login
+      // Enhanced authentication cookie clearing to prevent re-login (but allow manual re-login)
       const authCookies = [
         'SID', 'HSID', 'SSID', 'APISID', 'SAPISID',
         '__Secure-1PSID', '__Secure-3PSID', '__Secure-1PAPISID', '__Secure-3PAPISID',
@@ -266,7 +266,7 @@ function comprehensiveOptOutCleanup(domain: string) {
         'wide', 'f.req', 'GED_PLAYLIST_ACTIVITY', 'ACTIVITY'
       ];
       
-      // Clear cookies across all Google domains to prevent re-login
+      // Clear cookies across all Google domains to prevent auto re-login
       const googleDomains = [
         '.google.com', 'google.com', '.youtube.com', 'youtube.com',
         '.googleapis.com', 'googleapis.com', '.gstatic.com', 'gstatic.com',
@@ -281,40 +281,69 @@ function comprehensiveOptOutCleanup(domain: string) {
         });
       });
       
-      // Clear YouTube session storage to prevent auto re-login
+      // Clear YouTube session storage to prevent auto re-login but preserve login capability
       try {
+        // Clear only session-specific data, preserve login infrastructure
         sessionStorage.removeItem('yt-remote-connected-devices');
         sessionStorage.removeItem('yt-remote-device-id');
         sessionStorage.removeItem('yt-remote-fast-check-period');
         sessionStorage.removeItem('yt-remote-session-app');
         sessionStorage.removeItem('yt-remote-session-name');
-        sessionStorage.clear();
         
+        // Clear only tracking-related storage, keep essential login functionality
         localStorage.removeItem('yt-remote-connected-devices');
         localStorage.removeItem('yt-remote-device-id');
-        localStorage.removeItem('yt-player-quality');
-        localStorage.removeItem('yt-player-volume');
-        localStorage.setItem('yt-player-logged-in', 'false');
+        // Keep player preferences for better UX
+        // localStorage.removeItem('yt-player-quality');
+        // localStorage.removeItem('yt-player-volume');
         
-        console.log('🎥 Cleared YouTube session storage');
+        // Set temporary logged-out state (short duration)
+        sessionStorage.setItem('kavach-logout-timestamp', Date.now().toString());
+        
+        console.log('🎥 Cleared YouTube session storage (preserving login capability)');
       } catch (e) {
         console.warn('Could not clear YouTube session storage:', e);
       }
       
-      // Prevent YouTube auto-login by modifying page configuration
+      // Prevent YouTube auto-login by modifying page configuration (temporarily and minimally)
       try {
         if (cspSafe && (window as any).ytInitialData) {
-          (window as any).ytInitialData.responseContext = {
-            serviceTrackingParams: [],
-            webResponseContextExtensionData: { hasDecorated: true }
-          };
-          delete (window as any).ytInitialData.microformat?.playerMicroformatRenderer?.embed;
+          // Only clear tracking data, don't break login functionality
+          if ((window as any).ytInitialData.responseContext) {
+            (window as any).ytInitialData.responseContext.serviceTrackingParams = [];
+          }
+          // Don't modify embed data as it may break login
         }
         
         if (cspSafe && (window as any).ytcfg) {
+          // Store original config for quick restoration
+          if (!(window as any).kavachOriginalYtConfig) {
+            (window as any).kavachOriginalYtConfig = {
+              LOGGED_IN: (window as any).ytcfg.get('LOGGED_IN'),
+              SESSION_INDEX: (window as any).ytcfg.get('SESSION_INDEX')
+            };
+          }
+          
+          // Temporarily set logged out state (less aggressive)
           (window as any).ytcfg.set('LOGGED_IN', false);
           (window as any).ytcfg.set('SESSION_INDEX', 0);
-          (window as any).ytcfg.set('DELEGATED_SESSION_ID', null);
+          // Don't touch DELEGATED_SESSION_ID as it may be needed for login
+          
+          // Restore login capability after 10 seconds
+          setTimeout(() => {
+            try {
+              if ((window as any).kavachOriginalYtConfig) {
+                console.log('🎥 Restoring YouTube login capability after 10 seconds...');
+                // Don't restore the logged-in state, just remove blocks
+                (window as any).ytcfg.set('SESSION_INDEX', (window as any).kavachOriginalYtConfig.SESSION_INDEX);
+                delete (window as any).kavachOriginalYtConfig;
+                sessionStorage.removeItem('kavach-logout-timestamp');
+                console.log('🎥 YouTube login capability restored');
+              }
+            } catch (e) {
+              console.warn('Could not restore YouTube config:', e);
+            }
+          }, 10000); // 10-second timeout for login restoration
         }
       } catch (e) {
         console.warn('Could not modify YouTube configuration:', e);
@@ -436,32 +465,55 @@ function comprehensiveOptOutCleanup(domain: string) {
         }, delay);
       });
       
-      // Force logout to prevent auto re-login
+      // Gentle logout to clear session (non-intrusive)
       setTimeout(() => {
         try {
-          // Look for account menu and logout
+          // Only attempt logout if user is visibly logged in
           const accountButtons = document.querySelectorAll(
             '#avatar-btn, [aria-label*="account"], [aria-label*="Account"], yt-img-shadow[id="avatar"]'
           );
           
-          accountButtons.forEach(button => {
-            if (button) {
-              (button as HTMLElement).click();
-              setTimeout(() => {
-                const signOutButtons = document.querySelectorAll(
-                  'a[href*="logout"], yt-formatted-string:contains("Sign out"), [aria-label*="Sign out"]'
-                );
-                signOutButtons.forEach(signOut => {
-                  if (signOut) {
-                    (signOut as HTMLElement).click();
-                    console.log('🎥 Triggered YouTube logout');
-                  }
-                });
-              }, 500);
-            }
+          // Check if any account indicators are present and visible
+          const hasVisibleAccount = Array.from(accountButtons).some(button => {
+            const rect = button.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
           });
+          
+          if (hasVisibleAccount) {
+            console.log('🎥 User appears logged in, attempting gentle logout...');
+            
+            accountButtons.forEach(button => {
+              if (button) {
+                const rect = button.getBoundingClientRect();
+                const isVisible = rect.width > 0 && rect.height > 0;
+                
+                if (isVisible) {
+                  (button as HTMLElement).click();
+                  setTimeout(() => {
+                    // Look for sign out only in the opened menu
+                    const signOutButtons = document.querySelectorAll(
+                      'a[href*="logout"], yt-formatted-string:contains("Sign out"), [aria-label*="Sign out"]'
+                    );
+                    signOutButtons.forEach(signOut => {
+                      if (signOut) {
+                        const signOutRect = signOut.getBoundingClientRect();
+                        const isSignOutVisible = signOutRect.width > 0 && signOutRect.height > 0;
+                        
+                        if (isSignOutVisible) {
+                          (signOut as HTMLElement).click();
+                          console.log('🎥 Triggered gentle YouTube logout');
+                        }
+                      }
+                    });
+                  }, 500);
+                }
+              }
+            });
+          } else {
+            console.log('🎥 User not visibly logged in, skipping logout attempt');
+          }
         } catch (e) {
-          console.warn('Could not trigger YouTube logout:', e);
+          console.warn('Could not attempt YouTube logout:', e);
         }
       }, 3000);
     };
@@ -683,27 +735,44 @@ function comprehensiveOptOutCleanup(domain: string) {
         console.warn('Could not set Instagram storage flags:', e);
       }
       
-      // Attempt logout if user is signed in (to clear session completely)
+      // Gentle logout attempt if user is signed in (to clear session without blocking re-login)
       try {
-        const logoutSelectors = [
-          'a[href="/accounts/logout/"]',
-          'a[href*="logout"]',
-          'button[data-testid="logout"]',
-          '[aria-label="Log out"]',
-          '[aria-label="Sign out"]'
-        ];
+        // Check if user is actually logged in before attempting logout
+        const loginIndicators = document.querySelectorAll(
+          '[aria-label*="Profile"], [data-testid*="user-avatar"], .profile-picture, [href*="/accounts/"]'
+        );
         
-        logoutSelectors.forEach(selector => {
-          const logoutElement = document.querySelector(selector);
-          if (logoutElement) {
-            setTimeout(() => {
-              (logoutElement as HTMLElement).click();
-              console.log('📷 Triggered Instagram logout');
-            }, 2000);
-          }
-        });
+        if (loginIndicators.length > 0) {
+          console.log('📷 User appears to be logged in, attempting gentle logout...');
+          
+          const logoutSelectors = [
+            'a[href="/accounts/logout/"]',
+            'a[href*="logout"]',
+            'button[data-testid="logout"]',
+            '[aria-label="Log out"]',
+            '[aria-label="Sign out"]'
+          ];
+          
+          logoutSelectors.forEach(selector => {
+            const logoutElement = document.querySelector(selector);
+            if (logoutElement) {
+              // Check if logout is directly accessible
+              const rect = logoutElement.getBoundingClientRect();
+              const isVisible = rect.width > 0 && rect.height > 0;
+              
+              if (isVisible) {
+                setTimeout(() => {
+                  (logoutElement as HTMLElement).click();
+                  console.log('📷 Triggered gentle Instagram logout');
+                }, 2000);
+              }
+            }
+          });
+        } else {
+          console.log('📷 User not logged in, skipping logout attempt');
+        }
       } catch (e) {
-        console.warn('Could not trigger Instagram logout:', e);
+        console.warn('Could not attempt Instagram logout:', e);
       }
     };
 
@@ -775,59 +844,47 @@ function comprehensiveOptOutCleanup(domain: string) {
       }
     }
     
-    // Force logout by finding and clicking logout buttons
+    // Gentle logout suggestion (not forced) to clear session
     const logoutSelectors = [
       'a[href*="logout"]', 'a[href*="signout"]', 'a[href*="sign-out"]',
       'button[data-testid*="logout"]', 'button[data-testid*="signout"]',
       '.logout', '.signout', '.sign-out',
-      '[aria-label*="Sign out"]', '[aria-label*="Log out"]',
-      
-      // YouTube/Google specific logout
-      'a[href*="accounts.google.com/logout"]',
-      'yt-icon-button[aria-label*="Sign out"]',
-      '#avatar-btn', // YouTube profile menu
-      'button[aria-label*="Account menu"]',
-      '#button[aria-label*="Google Account"]'
+      '[aria-label*="Sign out"]', '[aria-label*="Log out"]'
     ];
-    
+
+    // Only attempt logout if user explicitly wants comprehensive cleanup
+    // This is now gentler and won't prevent re-login
     setTimeout(() => {
-      // First try to click profile menu to reveal logout options
-      const profileMenus = document.querySelectorAll('#avatar-btn, button[aria-label*="Account menu"], #button[aria-label*="Google Account"]');
-      profileMenus.forEach(menu => {
-        try {
-          (menu as HTMLElement).click();
-          console.log('🖱️ Clicked profile menu');
-          
-          // Wait a bit then look for logout option
-          setTimeout(() => {
-            const signOutOptions = document.querySelectorAll('a[href*="logout"], yt-formatted-string:contains("Sign out"), [aria-label*="Sign out"]');
-            signOutOptions.forEach(option => {
-              try {
-                (option as HTMLElement).click();
-                console.log('🚪 Clicked sign out option');
-              } catch (e) {
-                // Continue
-              }
-            });
-          }, 500);
-          
-        } catch (e) {
-          // Continue
-        }
-      });
+      // Check if user is actually logged in before attempting logout
+      const loginIndicators = document.querySelectorAll(
+        '#avatar-btn, [aria-label*="Account menu"], button[aria-label*="Account"], .profile-btn'
+      );
       
-      // Then try direct logout selectors
-      logoutSelectors.forEach(selector => {
-        const elements = document.querySelectorAll(selector);
-        elements.forEach(element => {
-          try {
-            (element as HTMLElement).click();
-            console.log('🚪 Clicked logout element:', selector);
-          } catch (e) {
-            // Continue
-          }
+      if (loginIndicators.length > 0) {
+        console.log('� User appears to be logged in, attempting gentle session cleanup...');
+        
+        // Only click logout if it's easily accessible (don't force through menus)
+        logoutSelectors.forEach(selector => {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(element => {
+            try {
+              // Check if logout element is directly visible and accessible
+              const rect = element.getBoundingClientRect();
+              const isDirectlyVisible = rect.width > 0 && rect.height > 0 && 
+                                      window.getComputedStyle(element).display !== 'none';
+              
+              if (isDirectlyVisible) {
+                (element as HTMLElement).click();
+                console.log('🚪 Clicked visible logout element:', selector);
+              }
+            } catch (e) {
+              // Continue - don't force logout if it fails
+            }
+          });
         });
-      });
+      } else {
+        console.log('🔍 User not logged in, skipping logout attempt');
+      }
     }, 2000);
     
     // Show comprehensive notification with CSP status
@@ -862,8 +919,9 @@ function comprehensiveOptOutCleanup(domain: string) {
           ✅ Storage completely wiped<br>
           ✅ Tracking scripts disabled<br>
           ✅ Consent management bypassed<br>
-          ✅ Session terminated<br>
-          ✅ Anti-tracking measures activated
+          ✅ Session gently terminated<br>
+          ✅ Anti-tracking measures activated<br>
+          ℹ️ You can log back in normally when desired
           ${!cspSafe ? '<br>⚠️ Some features limited by Content Security Policy' : ''}
         </div>
       </div>
